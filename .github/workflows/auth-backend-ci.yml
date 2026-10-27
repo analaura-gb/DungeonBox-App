@@ -1,0 +1,78 @@
+name: Auth Backend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "backend/auth/**"
+      - ".github/workflows/auth-backend-ci.yml"
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - "backend/auth/**"
+      - ".github/workflows/auth-backend-ci.yml"
+
+concurrency:
+  group: auth-backend-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tests:
+    name: Run auth backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend/auth
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: auth_db_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: bun run prisma:generate:test
+
+      - name: Run test database migrations
+        run: bun run db:migrate:test
+
+      - name: Run ESLint
+        run: bun run lint:ci
+
+      - name: Run unit test suite
+        run: bun run test
+
+      - name: Run e2e test suite
+        run: bun run test:e2e
+
+      - name: Build app
+        run: bun run build
