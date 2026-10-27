@@ -1,0 +1,51 @@
+name: Auth Frontend CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/auth/**"
+      - ".github/workflows/auth-frontend-ci.yml"
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - "frontend/auth/**"
+      - ".github/workflows/auth-frontend-ci.yml"
+
+concurrency:
+  group: auth-frontend-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    name: Run auth frontend checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend/auth
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run ESLint
+        run: bun run lint:ci
+
+      - name: Build app
+        run: bun run build
