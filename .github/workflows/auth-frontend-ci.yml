@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "frontend/auth/**"
-      - ".github/workflows/auth-frontend-ci.yml"
   pull_request:
     branches:
       - main
@@ -14,9 +11,6 @@ on:
       - opened
       - synchronize
       - reopened
-    paths:
-      - "frontend/auth/**"
-      - ".github/workflows/auth-frontend-ci.yml"
 
 concurrency:
   group: auth-frontend-ci-${{ github.ref }}
