@@ -63,7 +63,7 @@ describe('AuthController E2E', () => {
 
   it('should register a new user', async () => {
     const response = await request(httpServer())
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send(userData)
       .expect(201);
 
@@ -80,7 +80,7 @@ describe('AuthController E2E', () => {
 
   it('should reject registration without a password', async () => {
     await request(httpServer())
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ name: 'Test User', email: 'nopassword@email.com' })
       .expect(400);
 
@@ -93,23 +93,23 @@ describe('AuthController E2E', () => {
 
   it('should reject registration with a malformed email', async () => {
     await request(httpServer())
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ ...userData, email: 'abc' })
       .expect(400);
   });
 
   it('should reject registration with an unexpected field', async () => {
     await request(httpServer())
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send({ ...userData, isAdmin: true })
       .expect(400);
   });
 
   it('should login and set access_token cookie', async () => {
-    await request(httpServer()).post('/auth/register').send(userData);
+    await request(httpServer()).post('/api/auth/register').send(userData);
 
     const response = await request(httpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({
         email: userData.email,
         password: userData.password,
@@ -129,10 +129,10 @@ describe('AuthController E2E', () => {
   });
 
   it('should not set any cookie when the password is wrong', async () => {
-    await request(httpServer()).post('/auth/register').send(userData);
+    await request(httpServer()).post('/api/auth/register').send(userData);
 
     const response = await request(httpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({
         email: userData.email,
         password: 'wrong-password',
@@ -143,17 +143,19 @@ describe('AuthController E2E', () => {
   });
 
   it('should return authenticated user when access_token cookie is valid', async () => {
-    await request(httpServer()).post('/auth/register').send(userData);
+    await request(httpServer()).post('/api/auth/register').send(userData);
 
-    const loginResponse = await request(httpServer()).post('/auth/login').send({
-      email: userData.email,
-      password: userData.password,
-    });
+    const loginResponse = await request(httpServer())
+      .post('/api/auth/login')
+      .send({
+        email: userData.email,
+        password: userData.password,
+      });
 
     const cookies = loginResponse.headers['set-cookie'];
 
     const meResponse = await request(httpServer())
-      .get('/auth/me')
+      .get('/api/auth/me')
       .set('Cookie', cookies)
       .expect(200);
 
@@ -167,12 +169,12 @@ describe('AuthController E2E', () => {
   });
 
   it('should reject /auth/me without access_token cookie', async () => {
-    await request(httpServer()).get('/auth/me').expect(401);
+    await request(httpServer()).get('/api/auth/me').expect(401);
   });
 
   it('should logout and clear access_token cookie', async () => {
     const response = await request(httpServer())
-      .post('/auth/logout')
+      .post('/api/auth/logout')
       .expect(201);
 
     expect(response.body).toEqual({
@@ -189,13 +191,13 @@ describe('AuthController E2E', () => {
 
   it('should reset user password', async () => {
     const registerResponse = await request(httpServer())
-      .post('/auth/register')
+      .post('/api/auth/register')
       .send(userData);
 
     const { securityCode } = registerResponse.body as RegisterResponseBody;
 
     const response = await request(httpServer())
-      .post('/auth/reset-password')
+      .post('/api/auth/reset-password')
       .send({
         email: userData.email,
         securityCode,
@@ -206,7 +208,7 @@ describe('AuthController E2E', () => {
     expect(response.body).toBeDefined();
 
     await request(httpServer())
-      .post('/auth/login')
+      .post('/api/auth/login')
       .send({
         email: userData.email,
         password: '654321',

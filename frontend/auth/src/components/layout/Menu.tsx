@@ -1,10 +1,30 @@
 import { useAuth } from "../../contexts/useAuth";
 
 const items = [
-  { label: "Auth", href: "/auth/", protected: false },
-  { label: "Store", href: "/store/", protected: true },
-  { label: "Ranking", href: "/ranking/", protected: true },
-  { label: "Game", href: "/game/", protected: true },
+  {
+    label: "Auth",
+    path: "/auth/",
+    url: import.meta.env.VITE_AUTH_URL,
+    protected: false,
+  },
+  {
+    label: "Store",
+    path: "/store/",
+    url: import.meta.env.VITE_STORE_URL,
+    protected: true,
+  },
+  {
+    label: "Ranking",
+    path: "/ranking/",
+    url: import.meta.env.VITE_RANKING_URL,
+    protected: true,
+  },
+  {
+    label: "Game",
+    path: "/game/",
+    url: import.meta.env.VITE_GAME_URL,
+    protected: true,
+  },
 ];
 
 export function FrontendMenu() {
@@ -14,13 +34,13 @@ export function FrontendMenu() {
   return (
     <nav className="flex gap-3">
       {items.map((item) => {
-        const active = currentPath.startsWith(item.href);
+        const active = currentPath.startsWith(item.path);
         const disabled = item.protected && (!isAuthenticated || isLoading);
 
         if (disabled) {
           return (
             <button
-              key={item.href}
+              key={item.path}
               type="button"
               disabled
               title="Sign in to access this area"
@@ -33,8 +53,8 @@ export function FrontendMenu() {
 
         return (
           <a
-            key={item.href}
-            href={item.href}
+            key={item.path}
+            href={item.url}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
               active
                 ? "bg-amber-500 text-slate-950"
