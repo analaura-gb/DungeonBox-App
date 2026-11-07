@@ -27,12 +27,17 @@ const items = [
   },
 ];
 
-export function FrontendMenu() {
+type FrontendMenuProps = {
+  // stacked items, used by the collapsed menu on small screens
+  vertical?: boolean;
+};
+
+export function FrontendMenu({ vertical = false }: FrontendMenuProps) {
   const currentPath = window.location.pathname;
   const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <nav className="flex gap-3">
+    <nav className={vertical ? "flex flex-col gap-2" : "flex gap-3"}>
       {items.map((item) => {
         const active = currentPath.startsWith(item.path);
         const disabled = item.protected && (!isAuthenticated || isLoading);
@@ -44,7 +49,7 @@ export function FrontendMenu() {
               type="button"
               disabled
               title="Sign in to access this area"
-              className="cursor-not-allowed rounded-xl px-4 py-2 text-sm font-medium text-slate-500 opacity-60"
+              className="cursor-not-allowed rounded-xl px-4 py-2 text-left text-sm font-medium text-slate-500 opacity-60"
             >
               {item.label}
             </button>

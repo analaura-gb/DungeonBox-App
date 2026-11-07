@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  /* no pull-to-refresh / bounce while dragging the joystick */
+  overscroll-behavior: none;
+  background: #0b1020;
+  color: #f8fafc;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------------------------------------------------------------- game */
+/* effects used by the game screens (menus, HUD, overlays) */
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.pop-in {
+  animation: popIn 0.28s cubic-bezier(0.2, 1.2, 0.4, 1) both;
+}
+
+@keyframes floatY {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.float-y {
+  animation: floatY 3s ease-in-out infinite;
+}
+
+@keyframes scan {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 0 100vh;
+  }
+}
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 220, 0.045) 0px,
+    rgba(0, 255, 220, 0.045) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  animation: scan 8s linear infinite;
+}
+
+/* dark screen edges (CSS is free for the game; it used to be drawn every frame) */
+.vignette {
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(99, 230, 255, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(99, 230, 255, 0.55);
+  }
+}
+.glow-pulse {
+  animation: glowPulse 2.2s ease-in-out infinite;
+}

@@ -1,0 +1,52 @@
+// Ranking service database.
+// run_stats: one row per finished run, sent by the game service.
+// general_stats: one row per player with the totals of all their runs,
+// updated together with each new run.
+// The ranking lists the best runs, so a player can appear more than once.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model RunStats {
+  id             String   @id @default(uuid())
+  runId          String   @unique @map("run_id") // run in the game service: no foreign key
+  userId         String   @map("user_id")
+  characterId    String   @map("character_id")
+  won            Boolean // survived the whole semester
+  score          Int
+  enemiesKilled  Int      @map("enemies_killed")
+  survivedTime   Int      @map("survived_time") // seconds
+  coinsCollected Int      @map("coins_collected")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  generalStats GeneralStats @relation(fields: [userId], references: [userId])
+
+  @@index([userId])
+  @@index([score])
+  @@map("run_stats")
+}
+
+model GeneralStats {
+  id                  String   @id @default(uuid())
+  userId              String   @unique @map("user_id") // user in the auth service: no foreign key
+  totalRuns           Int      @map("total_runs")
+  totalWins           Int      @map("total_wins")
+  totalScore          Int      @map("total_score")
+  bestScore           Int      @map("best_score")
+  totalEnemiesKilled  Int      @map("total_enemies_killed")
+  totalSurvivedTime   Int      @map("total_survived_time") // seconds
+  bestSurvivedTime    Int      @map("best_survived_time") // seconds
+  totalCoinsCollected Int      @map("total_coins_collected")
+  lastRunAt           DateTime @map("last_run_at")
+
+  runs RunStats[]
+
+  @@index([bestScore])
+  @@map("general_stats")
+}
