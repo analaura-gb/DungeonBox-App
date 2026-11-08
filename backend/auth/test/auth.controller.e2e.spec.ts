@@ -35,6 +35,7 @@ describe('AuthController E2E', () => {
     name: 'Test User',
     email: 'testuser@email.com',
     password: '123456',
+    confirmPassword: '123456',
   };
 
   beforeAll(async () => {
@@ -103,6 +104,40 @@ describe('AuthController E2E', () => {
       .post('/api/auth/register')
       .send({ ...userData, isAdmin: true })
       .expect(400);
+  });
+
+  it('should reject registration when the confirmation does not match', async () => {
+    const response = await request(httpServer())
+      .post('/api/auth/register')
+      .send({ ...userData, confirmPassword: 'different' })
+      .expect(400);
+
+    expect(JSON.stringify(response.body)).toContain(
+      'confirmPassword must match password',
+    );
+
+    const user = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    expect(user).toBeNull();
+  });
+
+  it('should reject registration without the confirmation', async () => {
+    await request(httpServer())
+      .post('/api/auth/register')
+      .send({
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+      })
+      .expect(400);
+
+    const user = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    expect(user).toBeNull();
   });
 
   it('should login and set access_token cookie', async () => {
@@ -202,6 +237,7 @@ describe('AuthController E2E', () => {
         email: userData.email,
         securityCode,
         newPassword: '654321',
+        confirmNewPassword: '654321',
       })
       .expect(201);
 
@@ -213,6 +249,34 @@ describe('AuthController E2E', () => {
         email: userData.email,
         password: '654321',
       })
+      .expect(201);
+  });
+
+  it('should keep the old password when the reset confirmation does not match', async () => {
+    const registerResponse = await request(httpServer())
+      .post('/api/auth/register')
+      .send(userData);
+
+    const { securityCode } = registerResponse.body as RegisterResponseBody;
+
+    await request(httpServer())
+      .post('/api/auth/reset-password')
+      .send({
+        email: userData.email,
+        securityCode,
+        newPassword: '654321',
+        confirmNewPassword: 'different',
+      })
+      .expect(400);
+
+    await request(httpServer())
+      .post('/api/auth/login')
+      .send({ email: userData.email, password: '654321' })
+      .expect(401);
+
+    await request(httpServer())
+      .post('/api/auth/login')
+      .send({ email: userData.email, password: userData.password })
       .expect(201);
   });
 });
