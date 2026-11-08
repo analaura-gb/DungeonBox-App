@@ -17,12 +17,14 @@ type RegisterRequest = {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
 type ResetPasswordRequest = {
   email: string;
   securityCode: string;
   newPassword: string;
+  confirmNewPassword: string;
 };
 
 export const authService = {

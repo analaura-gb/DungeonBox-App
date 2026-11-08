@@ -30,7 +30,12 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await register({ name, email, password });
+      const response = await register({
+        name,
+        email,
+        password,
+        confirmPassword,
+      });
       setSecurityCode(response.securityCode);
     } catch (error) {
       if (error instanceof Error) {
@@ -152,6 +157,8 @@ export function RegisterPage() {
               <input
                 id="name"
                 type="text"
+                required
+                autoComplete="nickname"
                 placeholder="Choose a username"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -170,6 +177,8 @@ export function RegisterPage() {
               <input
                 id="email"
                 type="email"
+                required
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -188,6 +197,8 @@ export function RegisterPage() {
               <input
                 id="password"
                 type="password"
+                required
+                autoComplete="new-password"
                 placeholder="Create a password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -206,6 +217,8 @@ export function RegisterPage() {
               <input
                 id="confirmPassword"
                 type="password"
+                required
+                autoComplete="new-password"
                 placeholder="Repeat your password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
@@ -213,7 +226,11 @@ export function RegisterPage() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"

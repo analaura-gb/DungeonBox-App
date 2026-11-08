@@ -34,6 +34,7 @@ export function ResetPasswordPage() {
         email,
         securityCode,
         newPassword,
+        confirmNewPassword,
       });
 
       setSuccess("Password reset successfully. You can now sign in.");
@@ -81,6 +82,8 @@ export function ResetPasswordPage() {
               <input
                 id="email"
                 type="email"
+                required
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -99,6 +102,8 @@ export function ResetPasswordPage() {
               <input
                 id="securityCode"
                 type="text"
+                required
+                autoComplete="off"
                 placeholder="DGBX-XXXX-XXXX-XXXX"
                 value={securityCode}
                 onChange={(event) => setSecurityCode(event.target.value)}
@@ -117,6 +122,8 @@ export function ResetPasswordPage() {
               <input
                 id="newPassword"
                 type="password"
+                required
+                autoComplete="new-password"
                 placeholder="Create a new password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
@@ -135,6 +142,8 @@ export function ResetPasswordPage() {
               <input
                 id="confirmNewPassword"
                 type="password"
+                required
+                autoComplete="new-password"
                 placeholder="Repeat your new password"
                 value={confirmNewPassword}
                 onChange={(event) => setConfirmNewPassword(event.target.value)}
@@ -142,9 +151,17 @@ export function ResetPasswordPage() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
 
-            {success && <p className="text-sm text-emerald-400">{success}</p>}
+            {success && (
+              <p role="status" className="text-sm text-emerald-400">
+                {success}
+              </p>
+            )}
 
             <button
               type="submit"

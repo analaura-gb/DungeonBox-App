@@ -9,6 +9,7 @@ export type RegisterData = {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
 export type RegisterResponse = {
@@ -20,6 +21,7 @@ export type ResetPasswordData = {
   email: string;
   securityCode: string;
   newPassword: string;
+  confirmNewPassword: string;
 };
 
 export type AuthContextData = {

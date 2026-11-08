@@ -85,6 +85,8 @@ export function LoginPage() {
               <input
                 id="email"
                 type="email"
+                required
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
@@ -103,6 +105,8 @@ export function LoginPage() {
               <input
                 id="password"
                 type="password"
+                required
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -110,7 +114,11 @@ export function LoginPage() {
               />
             </div>
 
-            {error && <p className="text-sm text-red-400">{error}</p>}
+            {error && (
+              <p role="alert" className="text-sm text-red-400">
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"
@@ -129,15 +137,16 @@ export function LoginPage() {
             >
               Sign up
             </Link>
-            <p className="mt-4 text-sm text-slate-400">
-              Forgot your password?{" "}
-              <Link
-                to="/reset-password"
-                className="font-semibold text-amber-400 transition hover:text-amber-300"
-              >
-                Reset password
-              </Link>
-            </p>
+          </p>
+
+          <p className="mt-4 text-sm text-slate-400">
+            Forgot your password?{" "}
+            <Link
+              to="/reset-password"
+              className="font-semibold text-amber-400 transition hover:text-amber-300"
+            >
+              Reset password
+            </Link>
           </p>
         </div>
       </section>
