@@ -10,6 +10,16 @@ type ApiErrorResponse = {
   statusCode?: number;
 };
 
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export async function apiFetch<TResponse>(
   path: string,
   options: RequestOptions = {},
@@ -36,7 +46,7 @@ export async function apiFetch<TResponse>(
       message = errorData.message;
     }
 
-    throw new Error(message);
+    throw new ApiError(message, response.status);
   }
 
   return data as TResponse;

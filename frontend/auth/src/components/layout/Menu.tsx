@@ -1,5 +1,3 @@
-import { useAuth } from "../../contexts/useAuth";
-
 const items = [
   {
     label: "Auth",
@@ -27,12 +25,19 @@ const items = [
   },
 ];
 
-export function FrontendMenu() {
+type FrontendMenuProps = {
+  isAuthenticated: boolean;
+  isLoading: boolean;
+};
+
+export function FrontendMenu({
+  isAuthenticated,
+  isLoading,
+}: FrontendMenuProps) {
   const currentPath = window.location.pathname;
-  const { isAuthenticated, isLoading } = useAuth();
 
   return (
-    <nav className="flex gap-3">
+    <nav aria-label="Services" className="flex gap-3">
       {items.map((item) => {
         const active = currentPath.startsWith(item.path);
         const disabled = item.protected && (!isAuthenticated || isLoading);
@@ -55,6 +60,7 @@ export function FrontendMenu() {
           <a
             key={item.path}
             href={item.url}
+            aria-current={active ? "page" : undefined}
             className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
               active
                 ? "bg-amber-500 text-slate-950"

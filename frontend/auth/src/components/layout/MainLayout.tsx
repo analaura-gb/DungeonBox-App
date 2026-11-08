@@ -7,7 +7,7 @@ type MainLayoutProps = {
 };
 
 export function MainLayout({ children }: MainLayoutProps) {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
 
   return (
     <div className="min-h-screen">
@@ -19,7 +19,10 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
 
           <div className="flex items-center gap-4">
-            <FrontendMenu />
+            <FrontendMenu
+              isAuthenticated={isAuthenticated}
+              isLoading={isLoading}
+            />
 
             {isAuthenticated && (
               <div className="flex items-center gap-3">
@@ -27,7 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => void logout()}
                   className="rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-100 transition hover:bg-slate-800"
                 >
                   Logout
