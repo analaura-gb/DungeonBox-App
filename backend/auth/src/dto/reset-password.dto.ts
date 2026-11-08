@@ -5,6 +5,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { MatchesProperty } from '../validators/matches-property.validator';
 
 export class ResetPasswordDto {
   @IsEmail()
@@ -18,4 +19,8 @@ export class ResetPasswordDto {
   @MinLength(6)
   @MaxLength(128)
   newPassword: string;
+
+  @IsString()
+  @MatchesProperty('newPassword')
+  confirmNewPassword: string;
 }

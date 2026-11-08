@@ -5,6 +5,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { MatchesProperty } from '../validators/matches-property.validator';
 
 export class RegisterDto {
   @IsString()
@@ -20,4 +21,8 @@ export class RegisterDto {
   @MinLength(6)
   @MaxLength(128)
   password: string;
+
+  @IsString()
+  @MatchesProperty('password')
+  confirmPassword: string;
 }
