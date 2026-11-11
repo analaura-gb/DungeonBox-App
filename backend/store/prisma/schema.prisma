@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model PowerUp {
+  id              String  @id @default(uuid())
+  name            String
+  price           Int
+  attack          Int
+  defense         Int
+  health          Int
+  movementSpeed   Float   @map("movement_speed")
+  attackSpeed     Float   @map("attack_speed")
+  projectileSpeed Float   @map("projectile_speed")
+  projectileSize  Float   @map("projectile_size")
+  imageUrl String? @map("image_url")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  owners UserPowerUp[]
+
+  @@map("power_ups")
+}
+
+model Character {
+  id              String  @id @default(uuid())
+  name            String
+  price           Int
+  initialWeaponId String  @map("initial_weapon_id")
+  imageUrl        String? @map("image_url")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  owners UserCharacter[]
+
+  @@map("characters")
+}
+
+model UserPowerUp {
+  id        String @id @default(uuid())
+  userId    String @map("user_id")
+  powerUpId String @map("power_up_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  powerUp PowerUp @relation(fields: [powerUpId], references: [id])
+
+  @@unique([userId, powerUpId])
+  @@index([userId])
+  @@map("user_power_ups")
+}
+
+model UserCharacter {
+  id          String @id @default(uuid())
+  userId      String @map("user_id")
+  characterId String @map("character_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  character Character @relation(fields: [characterId], references: [id])
+
+  @@unique([userId, characterId])
+  @@index([userId])
+  @@map("user_characters")
+}
+
+model Wallet {
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
+  coins  Int    @default(0)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("wallets")
+}
