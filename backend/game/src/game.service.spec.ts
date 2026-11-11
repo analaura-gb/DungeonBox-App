@@ -20,12 +20,19 @@ describe('GameService', () => {
     startWeaponId: 'compiler',
   };
 
+  const weaponLevels = Array.from({ length: 8 }, (_, i) => ({
+    level: i + 1,
+    damage: 10 + i,
+  }));
+
   const weapons = [
-    { id: 'compiler', name: 'Programming Balloon', maxLevel: 8 },
-    { id: 'duck', name: 'Algorithm Book', maxLevel: 8 },
+    { id: 'compiler', behavior: 'projectile', levels: weaponLevels },
+    { id: 'duck', behavior: 'orbit', levels: weaponLevels },
   ];
 
-  const passiveItems = [{ id: 'espresso', name: 'Espresso Shot', maxLevel: 8 }];
+  const passiveItems = [
+    { id: 'espresso', stat: 'speed', value: 0.08, maxLevel: 8 },
+  ];
 
   const minutesAgo = (minutes: number) =>
     new Date(Date.now() - minutes * 60 * 1000);
@@ -63,8 +70,6 @@ describe('GameService', () => {
     findCharacter: mock((_id: string) =>
       Promise.resolve(character as typeof character | null),
     ),
-    findWeapons: mock(() => Promise.resolve(weapons)),
-    findPassiveItems: mock(() => Promise.resolve(passiveItems)),
     create: mock((_userId: string, _characterId: string) =>
       Promise.resolve(run()),
     ),
@@ -122,6 +127,8 @@ describe('GameService', () => {
         { id: 'heal', name: 'Free Pizza', value: 22, dropChance: 0.012 },
       ]),
     ),
+    findWeapons: mock(() => Promise.resolve(weapons)),
+    findPassiveItems: mock(() => Promise.resolve(passiveItems)),
   };
 
   beforeEach(async () => {
@@ -284,7 +291,7 @@ describe('GameService', () => {
   });
 
   describe('getCatalog', () => {
-    it('should return enemies, bosses and pickups', async () => {
+    it('should return enemies, bosses, pickups, weapons and passive items', async () => {
       const result = await service.getCatalog();
 
       expect(result.enemies.map((e) => [e.id, e.boss])).toEqual([
@@ -296,6 +303,11 @@ describe('GameService', () => {
       ]);
       expect(result.enemies[0]).not.toHaveProperty('bossOrder');
       expect(result.pickups[0].value).toBe(22);
+      expect(result.weapons.map((w) => [w.id, w.levels.length])).toEqual([
+        ['compiler', 8],
+        ['duck', 8],
+      ]);
+      expect(result.passiveItems[0].stat).toBe('speed');
     });
   });
 });

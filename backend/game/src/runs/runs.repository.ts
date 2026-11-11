@@ -28,14 +28,6 @@ export class RunsRepository {
     });
   }
 
-  findWeapons() {
-    return this.prisma.weapon.findMany();
-  }
-
-  findPassiveItems() {
-    return this.prisma.passiveItem.findMany();
-  }
-
   create(userId: string, characterId: string) {
     return this.prisma.run.create({
       data: { userId, characterId },

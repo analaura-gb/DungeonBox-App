@@ -22,4 +22,20 @@ export class CatalogRepository {
   findPickups() {
     return this.prisma.pickup.findMany();
   }
+
+  findWeapons() {
+    return this.prisma.weapon.findMany({
+      include: {
+        levels: {
+          omit: { id: true, weaponId: true },
+          orderBy: { level: 'asc' },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  findPassiveItems() {
+    return this.prisma.passiveItem.findMany({ orderBy: { id: 'asc' } });
+  }
 }

@@ -13,21 +13,77 @@ enum RunStatus {
   DIED
 }
 
-model Weapon {
-  id       String @id
-  name     String
-  maxLevel Int    @map("max_level")
+enum WeaponBehavior {
+  projectile
+  orbit
+  aura
+  pulse
+  melee
+  drone
+}
 
+enum WeaponEffect {
+  slow
+  burn
+  explode
+}
+
+enum PassiveStat {
+  speed
+  maxHp
+  cooldown
+  damage
+  pickupRadius
+  xp
+  armor
+}
+
+model Weapon {
+  id          String         @id
+  name        String
+  icon        String
+  color       String
+  description String
+  behavior    WeaponBehavior
+  minCooldown Float          @default(0) @map("min_cooldown")
+
+  levels     WeaponLevel[]
   characters Character[]
   runWeapons RunWeapon[]
 
   @@map("weapons")
 }
 
+model WeaponLevel {
+  id          String        @id @default(uuid())
+  weaponId    String        @map("weapon_id")
+  level       Int
+  description String
+  cooldown    Float
+  damage      Float
+  count       Int           @default(1)
+  pierce      Int           @default(0)
+  area        Float         @default(0)
+  speed       Float         @default(0)
+  size        Float         @default(0)
+  knockback   Float         @default(0)
+  effect      WeaponEffect?
+
+  weapon Weapon @relation(fields: [weaponId], references: [id], onDelete: Cascade)
+
+  @@unique([weaponId, level])
+  @@map("weapon_levels")
+}
+
 model PassiveItem {
-  id       String @id
-  name     String
-  maxLevel Int    @map("max_level")
+  id          String      @id
+  name        String
+  icon        String
+  color       String
+  description String
+  maxLevel    Int         @map("max_level")
+  stat        PassiveStat
+  value       Float
 
   runPassiveItems RunPassiveItem[]
 

@@ -26,11 +26,15 @@ export class GameService {
   ) {}
 
   async getCatalog() {
-    const [enemies, bosses, pickups] = await Promise.all([
-      this.catalogRepository.findEnemies(),
-      this.catalogRepository.findBosses(),
-      this.catalogRepository.findPickups(),
-    ]);
+    const [enemies, bosses, pickups, weapons, passiveItems] = await Promise.all(
+      [
+        this.catalogRepository.findEnemies(),
+        this.catalogRepository.findBosses(),
+        this.catalogRepository.findPickups(),
+        this.catalogRepository.findWeapons(),
+        this.catalogRepository.findPassiveItems(),
+      ],
+    );
 
     const toEnemy = ({ bossOrder, ...enemy }: (typeof enemies)[number]) => ({
       ...enemy,
@@ -41,6 +45,8 @@ export class GameService {
       enemies: enemies.map(toEnemy),
       bosses: bosses.map(toEnemy),
       pickups,
+      weapons,
+      passiveItems,
     };
   }
 
@@ -152,11 +158,15 @@ export class GameService {
 
   private async checkItems(body: FinishRunDto, startWeaponId: string) {
     const [weapons, passiveItems] = await Promise.all([
-      this.runsRepository.findWeapons(),
-      this.runsRepository.findPassiveItems(),
+      this.catalogRepository.findWeapons(),
+      this.catalogRepository.findPassiveItems(),
     ]);
 
-    this.checkList(body.weapons, weapons, 'weapon');
+    this.checkList(
+      body.weapons,
+      weapons.map((w) => ({ id: w.id, maxLevel: w.levels.length })),
+      'weapon',
+    );
     this.checkList(body.passiveItems, passiveItems, 'passive item');
 
     if (!body.weapons.some((w) => w.id === startWeaponId)) {

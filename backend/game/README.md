@@ -9,11 +9,11 @@ The game does not create sessions. It reads the `access_token` cookie set by
 the auth service at login and verifies it with the same `JWT_SECRET`, so
 `JWT_SECRET` in `.env.dev` must match the auth service.
 
-## Running locally (port 3001)
+## Running locally (port 3003)
 
 ```bash
 cd backend/game
-docker compose up -d           # Postgres: 5434 (dev) and 5435 (tests)
+docker compose up -d           # Postgres: 5438 (dev) and 5439 (tests)
 bun install                    # first time only
 bun run prisma:generate:dev    # first time only
 bun run db:migrate:dev         # first time only (creates the tables and the catalog)
@@ -26,7 +26,7 @@ Every route needs the session cookie (`401` without it).
 
 | Method | Route | What it does |
 | --- | --- | --- |
-| `GET` | `/api/game/catalog` | Enemies, bosses and pickups, loaded by the game before a run |
+| `GET` | `/api/game/catalog` | Enemies, bosses, pickups, weapons and passive items, loaded by the game before a run |
 | `POST` | `/api/game/runs` | Starts a run: `{ "characterId": "ana-laura" }` |
 | `POST` | `/api/game/runs/:id/finish` | Saves the result of a run (see below) |
 | `GET` | `/api/game/runs/me` | The player's 10 best finished runs, best score first |
@@ -62,11 +62,27 @@ the error is only logged.
   (`GET /api/game/catalog`), so enemy stats, spawn times and item drop
   chances are changed in the database. Bosses are the enemies with a
   `boss_order`.
-- `weapons`, `passive_items`, `characters`: catalog with the same ids as the
-  game frontend (`frontend/game/src/game/content.ts`). It is filled by the
-  `seed_catalog` migration; adding something to the game needs a new
-  migration like that one. Their balance (damage, cooldowns, ...) stays in
-  the frontend, since each weapon behaves differently.
+- `weapons` and `weapon_levels`: every weapon and its stats per level, also
+  read by the game. A weapon only picks one of the behaviors the game knows
+  (`behavior`), so a new weapon is a new row plus its levels:
+
+  | `behavior` | What it does | Level columns it uses |
+  | --- | --- | --- |
+  | `projectile` | shoots at the nearest enemy | `cooldown`, `damage`, `count`, `pierce`, `speed` |
+  | `orbit` | items circle the player | `cooldown` (hit interval per enemy), `damage`, `count`, `area` (orbit radius), `speed` (rotation), `size` (hit radius), `knockback` |
+  | `aura` | hurts every enemy around the player | `cooldown`, `damage`, `area` (radius), `effect` |
+  | `pulse` | expanding rings | `cooldown`, `damage`, `count` (rings), `area` (max radius), `speed`, `size` (ring width), `knockback` |
+  | `melee` | arc swipe where the player faces | `cooldown`, `damage`, `count` (1 front, 2 both sides), `area` (range), `size` (half angle, radians), `knockback`, `effect` |
+  | `drone` | homing shots | `cooldown`, `damage`, `count`, `speed`, `effect` |
+
+  `effect` is `slow`, `burn` or `explode`. The cooldown never drops below the
+  weapon's `min_cooldown`, whatever the passive items do. The max level is the
+  number of levels.
+- `passive_items`: each one raises one `stat` by `value` per level (`speed`,
+  `damage`, `pickupRadius` and `xp` in fractions, `cooldown` and `armor` as a
+  fraction compounded per level, `maxHp` in HP).
+- `characters`: the ids of the game frontend characters
+  (`frontend/game/src/game/content.ts`) and their starting weapon.
 - `runs`, `run_weapons`, `run_passive_items`: the runs and their final loadout.
   `user_id` comes from the token; users live in the auth service, so there is
   no foreign key to them.

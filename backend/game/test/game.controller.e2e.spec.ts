@@ -99,7 +99,7 @@ describe('GameController E2E', () => {
     await request(httpServer()).get('/api/game/catalog').expect(401);
   });
 
-  it('should return the enemies, bosses and pickups of the game', async () => {
+  it('should return the enemies, bosses, pickups, weapons and passive items of the game', async () => {
     const response = await request(httpServer())
       .get('/api/game/catalog')
       .set('Cookie', cookie)
@@ -109,6 +109,12 @@ describe('GameController E2E', () => {
       enemies: { id: string; boss: boolean; minTime: number }[];
       bosses: { id: string; boss: boolean }[];
       pickups: { id: string; dropChance: number }[];
+      weapons: {
+        id: string;
+        behavior: string;
+        levels: { level: number; damage: number }[];
+      }[];
+      passiveItems: { id: string; stat: string; maxLevel: number }[];
     };
 
     expect(body.enemies.map((e) => e.id)).toEqual([
@@ -130,6 +136,30 @@ describe('GameController E2E', () => {
       'heal',
       'magnet',
       'nuke',
+      'xp',
+    ]);
+    expect(body.weapons.map((w) => [w.id, w.behavior])).toEqual([
+      ['compiler', 'projectile'],
+      ['drone', 'drone'],
+      ['duck', 'orbit'],
+      ['gc', 'aura'],
+      ['solder', 'melee'],
+      ['wifi', 'pulse'],
+    ]);
+    expect(
+      body.weapons.every(
+        (w) =>
+          w.levels.length === 8 &&
+          w.levels.every((l, i) => l.level === i + 1 && !('id' in l)),
+      ),
+    ).toBe(true);
+    expect(body.passiveItems.map((p) => p.stat).sort()).toEqual([
+      'armor',
+      'cooldown',
+      'damage',
+      'maxHp',
+      'pickupRadius',
+      'speed',
       'xp',
     ]);
   });

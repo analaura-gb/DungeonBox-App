@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: game_db
     ports:
-      - '5434:5432'
+      - '5438:5432'
     volumes:
       - game-db-data:/var/lib/postgresql/data
 
@@ -20,7 +20,7 @@ services:
     environment:
       POSTGRES_DB: game_db_test
     ports:
-      - '5435:5432'
+      - '5439:5432'
     volumes:
       - game-db-test-data:/var/lib/postgresql/data
 
