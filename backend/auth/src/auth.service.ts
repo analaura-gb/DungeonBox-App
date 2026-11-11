@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -8,12 +9,16 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UsersRepository } from './users/users.repository';
+import { StoreClient } from './store/store.client';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
+    private readonly storeClient: StoreClient,
   ) {}
 
   async register(data: RegisterDto) {
@@ -30,12 +35,25 @@ export class AuthService {
 
     const securityCodeHash = await Bun.password.hash(securityCode);
 
-    await this.usersRepository.create({
+    const user = await this.usersRepository.create({
       name: data.name,
       email: data.email,
       passwordHash,
       securityCodeHash,
     });
+
+    // Best-effort de proposito: o store roda em outra maquina e carteira
+    // ausente ja equivale a saldo zero, entao o cadastro nao depende dele estar
+    // no ar. Se houver saldo inicial algum dia, isto precisa de reconciliacao.
+    try {
+      await this.storeClient.createWallet(user.id, user.email);
+    } catch (error) {
+      this.logger.warn(
+        `Could not create the wallet for ${user.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
 
     return {
       message: 'User registered successfully',
