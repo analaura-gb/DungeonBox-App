@@ -50,9 +50,6 @@ describe('AuthController E2E', () => {
     process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
     process.env.COOKIE_SECURE = 'false';
 
-    // A criacao da carteira fala com outro servico por HTTP. O e2e nao sobe o
-    // store, e deixar a chamada real acontecer tornaria o teste dependente de
-    // rede. Este duplo registra as chamadas para o teste afirmar sobre elas.
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -113,8 +110,6 @@ describe('AuthController E2E', () => {
   });
 
   it('should still register the user when the store is unreachable', async () => {
-    // O store roda em outra maquina. Carteira ausente ja equivale a saldo zero,
-    // entao a loja fora do ar nao pode impedir ninguem de se cadastrar.
     storeClientMock.createWallet.mockRejectedValueOnce(
       new Error('fetch failed'),
     );

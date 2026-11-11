@@ -42,9 +42,6 @@ export class AuthService {
       securityCodeHash,
     });
 
-    // Best-effort de proposito: o store roda em outra maquina e carteira
-    // ausente ja equivale a saldo zero, entao o cadastro nao depende dele estar
-    // no ar. Se houver saldo inicial algum dia, isto precisa de reconciliacao.
     try {
       await this.storeClient.createWallet(user.id, user.email);
     } catch (error) {

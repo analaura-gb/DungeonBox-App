@@ -32,10 +32,6 @@ export class StoreController {
     return this.storeService.getOrCreateWallet(request.user.sub);
   }
 
-  // Mesmo comportamento do GET: garante a carteira e devolve o saldo. O verbo
-  // existe para o auth dizer "faca existir" no register, em vez de provocar
-  // efeito com um GET. Se um dia divergirem -- saldo inicial, por exemplo --,
-  // a rota ja esta no lugar.
   @Post('me/wallet')
   @HttpCode(HttpStatus.OK)
   createWallet(@Req() request: AuthenticatedRequest) {

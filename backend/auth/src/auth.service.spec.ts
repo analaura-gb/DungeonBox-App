@@ -153,8 +153,6 @@ describe('AuthService', () => {
     });
 
     it('should still register the user when the store call fails', async () => {
-      // O store roda em outra maquina, e carteira ausente ja equivale a saldo
-      // zero: a loja fora do ar nao pode impedir ninguem de se cadastrar.
       storeClientMock.createWallet.mockRejectedValueOnce(
         new Error('fetch failed'),
       );
@@ -179,7 +177,6 @@ describe('AuthService', () => {
         }),
       ).rejects.toThrow(ConflictException);
 
-      // Cadastro recusado nao pode deixar carteira orfa no store.
       expect(storeClientMock.createWallet).not.toHaveBeenCalled();
     });
   });
