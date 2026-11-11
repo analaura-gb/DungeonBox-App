@@ -5,6 +5,7 @@ import { UsersRepository, CreateUserData } from './users/users.repository';
 import { User } from '../generated/prisma/client';
 import { JwtService } from '@nestjs/jwt';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { StoreClient } from './store/store.client';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -41,12 +42,20 @@ describe('AuthService', () => {
     signAsync: mock(() => Promise.resolve('fake-access-token')),
   };
 
+  const storeClientMock = {
+    createWallet: mock(
+      (_userId: string, _email: string): Promise<void> => Promise.resolve(),
+    ),
+  };
+
   beforeEach(async () => {
     usersRepositoryMock.findByEmail.mockClear();
     usersRepositoryMock.findById.mockClear();
     usersRepositoryMock.create.mockClear();
     usersRepositoryMock.updatePassword.mockClear();
     jwtServiceMock.signAsync.mockClear();
+    storeClientMock.createWallet.mockClear();
+    storeClientMock.createWallet.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -58,6 +67,10 @@ describe('AuthService', () => {
         {
           provide: JwtService,
           useValue: jwtServiceMock,
+        },
+        {
+          provide: StoreClient,
+          useValue: storeClientMock,
         },
       ],
     }).compile();
@@ -122,6 +135,49 @@ describe('AuthService', () => {
           password: '123456',
         }),
       ).rejects.toThrow('Database unavailable');
+    });
+
+    it('should ask the store for a wallet for the user it created', async () => {
+      usersRepositoryMock.create.mockResolvedValueOnce(activeUser);
+
+      await service.register({
+        name: 'Ana Laura',
+        email: 'ana.laura@email.com',
+        password: '123456',
+      });
+
+      expect(storeClientMock.createWallet).toHaveBeenCalledWith(
+        activeUser.id,
+        activeUser.email,
+      );
+    });
+
+    it('should still register the user when the store call fails', async () => {
+      storeClientMock.createWallet.mockRejectedValueOnce(
+        new Error('fetch failed'),
+      );
+
+      const result = await service.register({
+        name: 'Ana Laura',
+        email: 'ana.laura@email.com',
+        password: '123456',
+      });
+
+      expect(result.message).toBe('User registered successfully');
+    });
+
+    it('should not ask for a wallet when the email is already taken', async () => {
+      usersRepositoryMock.findByEmail.mockResolvedValueOnce(activeUser);
+
+      await expect(
+        service.register({
+          name: 'Ana Laura',
+          email: 'ana.laura@email.com',
+          password: '123456',
+        }),
+      ).rejects.toThrow(ConflictException);
+
+      expect(storeClientMock.createWallet).not.toHaveBeenCalled();
     });
   });
 

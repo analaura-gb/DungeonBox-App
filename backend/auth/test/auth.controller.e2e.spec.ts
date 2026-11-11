@@ -5,6 +5,7 @@ import {
   describe,
   expect,
   it,
+  mock,
 } from 'bun:test';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -13,6 +14,13 @@ import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/configure-app';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { StoreClient } from '../src/store/store.client';
+
+const storeClientMock = {
+  createWallet: mock(
+    (_userId: string, _email: string): Promise<void> => Promise.resolve(),
+  ),
+};
 
 type RegisterResponseBody = {
   message: string;
@@ -44,7 +52,10 @@ describe('AuthController E2E', () => {
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreClient)
+      .useValue(storeClientMock)
+      .compile();
 
     app = moduleRef.createNestApplication();
     prisma = moduleRef.get(PrismaService);
@@ -56,6 +67,9 @@ describe('AuthController E2E', () => {
 
   beforeEach(async () => {
     await prisma.user.deleteMany();
+
+    storeClientMock.createWallet.mockClear();
+    storeClientMock.createWallet.mockResolvedValue(undefined);
   });
 
   afterAll(async () => {
@@ -77,6 +91,52 @@ describe('AuthController E2E', () => {
 
     expect(body).not.toHaveProperty('passwordHash');
     expect(body).not.toHaveProperty('securityCodeHash');
+  });
+
+  it('should ask the store for a wallet with the id of the user it just created', async () => {
+    await request(httpServer())
+      .post('/api/auth/register')
+      .send(userData)
+      .expect(201);
+
+    const user = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    expect(storeClientMock.createWallet).toHaveBeenCalledWith(
+      user?.id,
+      userData.email,
+    );
+  });
+
+  it('should still register the user when the store is unreachable', async () => {
+    storeClientMock.createWallet.mockRejectedValueOnce(
+      new Error('fetch failed'),
+    );
+
+    await request(httpServer())
+      .post('/api/auth/register')
+      .send(userData)
+      .expect(201);
+
+    const user = await prisma.user.findUnique({
+      where: { email: userData.email },
+    });
+
+    expect(user).not.toBeNull();
+  });
+
+  it('should not ask for a wallet when the registration is refused', async () => {
+    await request(httpServer()).post('/api/auth/register').send(userData);
+
+    storeClientMock.createWallet.mockClear();
+
+    await request(httpServer())
+      .post('/api/auth/register')
+      .send(userData)
+      .expect(409);
+
+    expect(storeClientMock.createWallet).not.toHaveBeenCalled();
   });
 
   it('should reject registration without a password', async () => {

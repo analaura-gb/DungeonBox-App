@@ -1,0 +1,30 @@
+services:
+  store-db:
+    image: postgres:16
+    container_name: store-db
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: store_db
+    ports:
+      - '5434:5432'
+    volumes:
+      - store-db-data:/var/lib/postgresql/data
+
+  store-db-test:
+    image: postgres:16
+    container_name: store-db-test
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: store_db_test
+    ports:
+      - '5435:5432'
+    volumes:
+      - store-db-test-data:/var/lib/postgresql/data
+
+volumes:
+  store-db-data:
+  store-db-test-data:
