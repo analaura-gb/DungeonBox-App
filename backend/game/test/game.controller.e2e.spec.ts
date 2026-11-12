@@ -106,12 +106,19 @@ describe('GameController E2E', () => {
       .expect(200);
 
     const body = response.body as {
-      enemies: { id: string; boss: boolean; minTime: number }[];
-      bosses: { id: string; boss: boolean }[];
-      pickups: { id: string; dropChance: number }[];
+      enemies: {
+        id: string;
+        boss: boolean;
+        minTime: number;
+        imageUrl: string | null;
+      }[];
+      bosses: { id: string; boss: boolean; imageUrl: string | null }[];
+      pickups: { id: string; dropChance: number; imageUrl: string | null }[];
       weapons: {
         id: string;
         behavior: string;
+        imageUrl: string | null;
+        shotImageUrl: string | null;
         levels: { level: number; damage: number }[];
       }[];
       passiveItems: { id: string; stat: string; maxLevel: number }[];
@@ -153,6 +160,14 @@ describe('GameController E2E', () => {
           w.levels.every((l, i) => l.level === i + 1 && !('id' in l)),
       ),
     ).toBe(true);
+    expect(body.enemies[0].imageUrl).toBe('/assets/enemies/bug.png');
+    expect(body.bosses[0].imageUrl).toBe('/assets/bosses/calc1.png');
+    expect(body.pickups.find((p) => p.id === 'xp')?.imageUrl).toBeNull();
+    expect(body.weapons.find((w) => w.id === 'drone')).toMatchObject({
+      imageUrl: '/assets/weapons/drone.png',
+      shotImageUrl: '/assets/weapons/drone-shot.png',
+    });
+
     expect(body.passiveItems.map((p) => p.stat).sort()).toEqual([
       'armor',
       'cooldown',
@@ -171,12 +186,55 @@ describe('GameController E2E', () => {
     expect(run.characterId).toBe('ana-laura');
   });
 
-  it('should reject an unknown character', async () => {
-    await request(httpServer())
-      .post('/api/game/runs')
-      .set('Cookie', cookie)
-      .send({ characterId: 'nobody' })
-      .expect(400);
+  it('should only start a run with a character the store says the user owns', async () => {
+    const seen: string[] = [];
+    const store = Bun.serve({
+      port: 0,
+      fetch(req) {
+        seen.push(req.headers.get('cookie') ?? '');
+
+        return Response.json([{ id: 'guilherme', initialWeaponId: 'duck' }]);
+      },
+    });
+    process.env.STORE_API_URL = `http://localhost:${store.port}`;
+
+    try {
+      await request(httpServer())
+        .post('/api/game/runs')
+        .set('Cookie', cookie)
+        .send({ characterId: 'ana-laura' })
+        .expect(403);
+
+      const response = await request(httpServer())
+        .post('/api/game/runs')
+        .set('Cookie', cookie)
+        .send({ characterId: 'guilherme' })
+        .expect(201);
+
+      const run = await prisma.run.findUniqueOrThrow({
+        where: { id: (response.body as RunBody).id },
+      });
+
+      expect(run.startWeaponId).toBe('duck');
+      expect(seen.every((c) => c.startsWith('access_token='))).toBe(true);
+    } finally {
+      delete process.env.STORE_API_URL;
+      await store.stop(true);
+    }
+  });
+
+  it('should not start a run when the store is down', async () => {
+    process.env.STORE_API_URL = 'http://localhost:1';
+
+    try {
+      await request(httpServer())
+        .post('/api/game/runs')
+        .set('Cookie', cookie)
+        .send({ characterId: 'ana-laura' })
+        .expect(503);
+    } finally {
+      delete process.env.STORE_API_URL;
+    }
   });
 
   it('should finish a run and save its weapons and passive items', async () => {
@@ -203,6 +261,58 @@ describe('GameController E2E', () => {
     expect(saved?.finishedAt).not.toBeNull();
     expect(saved?.weapons).toHaveLength(2);
     expect(saved?.passiveItems).toHaveLength(1);
+  });
+
+  it("should add the coins of a finished run to the player's store wallet", async () => {
+    const credits: { path: string; key: string | null; body: unknown }[] = [];
+    const store = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const path = new URL(req.url).pathname;
+
+        if (path.endsWith('/credit')) {
+          credits.push({
+            path,
+            key: req.headers.get('x-internal-key'),
+            body: await req.json(),
+          });
+
+          return Response.json({ coins: 25 });
+        }
+
+        return Response.json([
+          { id: 'ana-laura', initialWeaponId: 'compiler' },
+        ]);
+      },
+    });
+    process.env.STORE_API_URL = `http://localhost:${store.port}`;
+    process.env.INTERNAL_API_KEY = 'e2e-internal-key';
+
+    try {
+      const run = await startRun();
+
+      await request(httpServer())
+        .post(`/api/game/runs/${run.id}/finish`)
+        .set('Cookie', cookie)
+        .send(result)
+        .expect(200);
+
+      for (let i = 0; i < 50 && credits.length === 0; i++) {
+        await Bun.sleep(20);
+      }
+
+      expect(credits).toEqual([
+        {
+          path: '/api/store/internal/wallets/user-1/credit',
+          key: 'e2e-internal-key',
+          body: { amount: 25 },
+        },
+      ]);
+    } finally {
+      delete process.env.STORE_API_URL;
+      delete process.env.INTERNAL_API_KEY;
+      await store.stop(true);
+    }
   });
 
   it('should not finish the same run twice', async () => {

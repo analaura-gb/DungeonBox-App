@@ -35,6 +35,10 @@ export class CatalogRepository {
     });
   }
 
+  findWeapon(id: string) {
+    return this.prisma.weapon.findUnique({ where: { id } });
+  }
+
   findPassiveItems() {
     return this.prisma.passiveItem.findMany({ orderBy: { id: 'asc' } });
   }

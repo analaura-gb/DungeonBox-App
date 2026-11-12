@@ -27,7 +27,7 @@ export class GameController {
 
   @Post('runs')
   startRun(@Req() request: AuthenticatedRequest, @Body() body: StartRunDto) {
-    return this.gameService.startRun(request.user.sub, body);
+    return this.gameService.startRun(request.user, body);
   }
 
   @Post('runs/:id/finish')

@@ -3,22 +3,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { RunStatus } from '../generated/prisma/client';
 import { GameService } from './game.service';
 import { FinishRunData, RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
 import { FinishRunDto } from './dto/finish-run.dto';
+import { StoreCharacter, StoreClient } from './store/store.client';
 
 describe('GameService', () => {
   let service: GameService;
 
-  const character = {
-    id: 'ana-laura',
-    name: 'Ana Laura',
-    startWeaponId: 'compiler',
-  };
+  const user = { sub: 'user-1', email: 'player@email.com' };
 
   const weaponLevels = Array.from({ length: 8 }, (_, i) => ({
     level: i + 1,
@@ -49,7 +48,7 @@ describe('GameService', () => {
     coinsEarned: 0,
     startedAt: minutesAgo(5),
     finishedAt: null,
-    character,
+    startWeaponId: 'compiler',
     ...overrides,
   });
 
@@ -67,11 +66,9 @@ describe('GameService', () => {
   });
 
   const repositoryMock = {
-    findCharacter: mock((_id: string) =>
-      Promise.resolve(character as typeof character | null),
-    ),
-    create: mock((_userId: string, _characterId: string) =>
-      Promise.resolve(run()),
+    create: mock(
+      (_userId: string, _characterId: string, _startWeaponId: string | null) =>
+        Promise.resolve(run()),
     ),
     findByIdForUser: mock((_id: string, _userId: string) =>
       Promise.resolve(run() as ReturnType<typeof run> | null),
@@ -103,7 +100,7 @@ describe('GameService', () => {
   const enemy = (id: string, bossOrder: number | null) => ({
     id,
     name: id,
-    icon: '🐛',
+    imageUrl: null,
     color: '#7cff9b',
     hp: 10,
     speed: 60,
@@ -128,14 +125,25 @@ describe('GameService', () => {
       ]),
     ),
     findWeapons: mock(() => Promise.resolve(weapons)),
+    findWeapon: mock((id: string) =>
+      Promise.resolve(weapons.find((w) => w.id === id) ?? null),
+    ),
     findPassiveItems: mock(() => Promise.resolve(passiveItems)),
+  };
+
+  const storeMock = {
+    isConfigured: mock(() => true),
+    listOwnedCharacters: mock(
+      (_userId: string, _email: string): Promise<StoreCharacter[]> =>
+        Promise.resolve([{ id: 'ana-laura', initialWeaponId: 'compiler' }]),
+    ),
+    creditCoins: mock((_userId: string, _amount: number) => Promise.resolve()),
   };
 
   beforeEach(async () => {
     Object.values(repositoryMock).forEach((m) => m.mockClear());
-    repositoryMock.findCharacter.mockImplementation(() =>
-      Promise.resolve(character),
-    );
+    Object.values(storeMock).forEach((m) => m.mockClear());
+    storeMock.isConfigured.mockImplementation(() => true);
     repositoryMock.findByIdForUser.mockImplementation(() =>
       Promise.resolve(run()),
     );
@@ -145,6 +153,7 @@ describe('GameService', () => {
         GameService,
         { provide: RunsRepository, useValue: repositoryMock },
         { provide: CatalogRepository, useValue: catalogMock },
+        { provide: StoreClient, useValue: storeMock },
       ],
     }).compile();
 
@@ -152,25 +161,64 @@ describe('GameService', () => {
   });
 
   describe('startRun', () => {
-    it('should create a run for the user', async () => {
-      const result = await service.startRun('user-1', {
+    it('should create a run with the starting weapon of an owned character', async () => {
+      const result = await service.startRun(user, {
         characterId: 'ana-laura',
       });
 
-      expect(repositoryMock.create).toHaveBeenCalledWith('user-1', 'ana-laura');
+      expect(storeMock.listOwnedCharacters).toHaveBeenCalledWith(
+        'user-1',
+        'player@email.com',
+      );
+      expect(repositoryMock.create).toHaveBeenCalledWith(
+        'user-1',
+        'ana-laura',
+        'compiler',
+      );
       expect(result.id).toBe('run-1');
       expect(result.characterId).toBe('ana-laura');
     });
 
-    it('should reject an unknown character', async () => {
-      repositoryMock.findCharacter.mockImplementation(() =>
-        Promise.resolve(null),
+    it('should reject a character the user does not own', async () => {
+      await expect(
+        service.startRun(user, { characterId: 'enzo' }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(repositoryMock.create).not.toHaveBeenCalled();
+    });
+
+    it('should reject a character whose starting weapon the game does not have', async () => {
+      storeMock.listOwnedCharacters.mockResolvedValueOnce([
+        { id: 'ana-laura', initialWeaponId: 'bazooka' },
+      ]);
+
+      await expect(
+        service.startRun(user, { characterId: 'ana-laura' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(repositoryMock.create).not.toHaveBeenCalled();
+    });
+
+    it('should not start a run when the store cannot answer', async () => {
+      storeMock.listOwnedCharacters.mockRejectedValueOnce(
+        new Error('Store answered 500 when listing the characters'),
       );
 
       await expect(
-        service.startRun('user-1', { characterId: 'nobody' }),
-      ).rejects.toThrow(BadRequestException);
+        service.startRun(user, { characterId: 'ana-laura' }),
+      ).rejects.toThrow(ServiceUnavailableException);
       expect(repositoryMock.create).not.toHaveBeenCalled();
+    });
+
+    it('should skip the store check when no store is configured', async () => {
+      storeMock.isConfigured.mockImplementation(() => false);
+
+      await service.startRun(user, { characterId: 'anyone' });
+
+      expect(storeMock.listOwnedCharacters).not.toHaveBeenCalled();
+      expect(repositoryMock.create).toHaveBeenCalledWith(
+        'user-1',
+        'anyone',
+        null,
+      );
     });
   });
 
@@ -187,6 +235,56 @@ describe('GameService', () => {
         { id: 'compiler', level: 3 },
         { id: 'duck', level: 1 },
       ]);
+      expect(storeMock.creditCoins).toHaveBeenCalledWith('user-1', 12);
+    });
+
+    it('should send the run and its build to the ranking', async () => {
+      const originalFetch = globalThis.fetch;
+      const fetchMock = mock(() =>
+        Promise.resolve({ ok: true, status: 201 } as Response),
+      );
+      globalThis.fetch = fetchMock as unknown as typeof fetch;
+      process.env.RANKING_API_URL = 'http://ranking.test';
+
+      try {
+        await service.finishRun('user-1', 'run-1', validResult());
+
+        const [url, init] = fetchMock.mock.calls[0] as unknown as [
+          string,
+          RequestInit,
+        ];
+        const body = JSON.parse(init.body as string) as Record<string, unknown>;
+
+        expect(url).toBe('http://ranking.test/api/ranking/runs');
+        expect(body.weapons).toEqual([
+          { id: 'compiler', level: 3 },
+          { id: 'duck', level: 1 },
+        ]);
+        expect(body.passiveItems).toEqual(validResult().passiveItems);
+      } finally {
+        globalThis.fetch = originalFetch;
+        delete process.env.RANKING_API_URL;
+      }
+    });
+
+    it('should still finish the run when the store cannot credit the coins', async () => {
+      storeMock.creditCoins.mockRejectedValueOnce(new Error('Store is down'));
+
+      const result = await service.finishRun('user-1', 'run-1', validResult());
+
+      expect(result.coinsEarned).toBe(12);
+    });
+
+    it('should not credit a run without coins or without a store', async () => {
+      await service.finishRun('user-1', 'run-1', {
+        ...validResult(),
+        score: 99,
+      });
+
+      storeMock.isConfigured.mockImplementation(() => false);
+      await service.finishRun('user-1', 'run-1', validResult());
+
+      expect(storeMock.creditCoins).not.toHaveBeenCalled();
     });
 
     it('should mark a full-length run as won', async () => {
@@ -273,6 +371,19 @@ describe('GameService', () => {
           weapons: [{ id: 'duck', level: 2 }],
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should not require a starting weapon when the run started without the store', async () => {
+      repositoryMock.findByIdForUser.mockImplementation(() =>
+        Promise.resolve(run({ startWeaponId: null })),
+      );
+
+      await service.finishRun('user-1', 'run-1', {
+        ...validResult(),
+        weapons: [{ id: 'duck', level: 2 }],
+      });
+
+      expect(repositoryMock.finish).toHaveBeenCalled();
     });
   });
 

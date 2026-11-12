@@ -1,15 +1,23 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { Run, RunStatus } from '../generated/prisma/client';
+import {
+  Run,
+  RunPassiveItem,
+  RunStatus,
+  RunWeapon,
+} from '../generated/prisma/client';
 import { FinishRunDto, RunItemDto } from './dto/finish-run.dto';
 import { StartRunDto } from './dto/start-run.dto';
 import { RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
+import { StoreClient } from './store/store.client';
 
 const TIME_LIMIT_SECONDS = 10 * 60;
 const TIME_TOLERANCE_SECONDS = 5;
@@ -23,6 +31,7 @@ export class GameService {
   constructor(
     private readonly runsRepository: RunsRepository,
     private readonly catalogRepository: CatalogRepository,
+    private readonly storeClient: StoreClient,
   ) {}
 
   async getCatalog() {
@@ -50,14 +59,17 @@ export class GameService {
     };
   }
 
-  async startRun(userId: string, { characterId }: StartRunDto) {
-    const character = await this.runsRepository.findCharacter(characterId);
+  async startRun(
+    user: { sub: string; email: string },
+    { characterId }: StartRunDto,
+  ) {
+    const startWeaponId = await this.findStartWeapon(user, characterId);
 
-    if (!character) {
-      throw new BadRequestException('Unknown character');
-    }
-
-    const run = await this.runsRepository.create(userId, characterId);
+    const run = await this.runsRepository.create(
+      user.sub,
+      characterId,
+      startWeaponId,
+    );
 
     return {
       id: run.id,
@@ -87,7 +99,7 @@ export class GameService {
       throw new BadRequestException('A won run must last the whole semester');
     }
 
-    await this.checkItems(body, run.character.startWeaponId);
+    await this.checkItems(body, run.startWeaponId);
 
     const finished = await this.runsRepository.finish(run.id, {
       status: body.won ? RunStatus.WON : RunStatus.DIED,
@@ -101,6 +113,7 @@ export class GameService {
     });
 
     this.sendToRanking(finished);
+    this.creditCoins(finished);
 
     return {
       ...this.toSummary(finished),
@@ -124,7 +137,9 @@ export class GameService {
     return runs.map((run) => this.toSummary(run));
   }
 
-  private sendToRanking(run: Run) {
+  private sendToRanking(
+    run: Run & { weapons: RunWeapon[]; passiveItems: RunPassiveItem[] },
+  ) {
     const rankingUrl = process.env.RANKING_API_URL;
 
     if (!rankingUrl) return;
@@ -144,6 +159,11 @@ export class GameService {
         enemiesKilled: run.kills,
         survivedTime: run.survivedTime,
         coinsCollected: run.coinsEarned,
+        weapons: run.weapons.map((w) => ({ id: w.weaponId, level: w.level })),
+        passiveItems: run.passiveItems.map((p) => ({
+          id: p.passiveItemId,
+          level: p.level,
+        })),
       }),
     })
       .then((response) => {
@@ -156,7 +176,49 @@ export class GameService {
       });
   }
 
-  private async checkItems(body: FinishRunDto, startWeaponId: string) {
+  private creditCoins(run: Run) {
+    if (!this.storeClient.isConfigured() || run.coinsEarned <= 0) return;
+
+    this.storeClient
+      .creditCoins(run.userId, run.coinsEarned)
+      .catch((error: Error) => {
+        this.logger.warn(
+          `Could not credit the coins of run ${run.id}: ${error.message}`,
+        );
+      });
+  }
+
+  private async findStartWeapon(
+    user: { sub: string; email: string },
+    characterId: string,
+  ) {
+    if (!this.storeClient.isConfigured()) return null;
+
+    const characters = await this.storeClient
+      .listOwnedCharacters(user.sub, user.email)
+      .catch((error: Error) => {
+        this.logger.warn(`Could not reach the store: ${error.message}`);
+        throw new ServiceUnavailableException('Store is unavailable');
+      });
+
+    const character = characters.find((c) => c.id === characterId);
+
+    if (!character) {
+      throw new ForbiddenException('Character not owned');
+    }
+
+    const weapon = await this.catalogRepository.findWeapon(
+      character.initialWeaponId,
+    );
+
+    if (!weapon) {
+      throw new BadRequestException('Unknown starting weapon');
+    }
+
+    return weapon.id;
+  }
+
+  private async checkItems(body: FinishRunDto, startWeaponId: string | null) {
     const [weapons, passiveItems] = await Promise.all([
       this.catalogRepository.findWeapons(),
       this.catalogRepository.findPassiveItems(),
@@ -169,7 +231,7 @@ export class GameService {
     );
     this.checkList(body.passiveItems, passiveItems, 'passive item');
 
-    if (!body.weapons.some((w) => w.id === startWeaponId)) {
+    if (startWeaponId && !body.weapons.some((w) => w.id === startWeaponId)) {
       throw new BadRequestException('Starting weapon is missing');
     }
   }

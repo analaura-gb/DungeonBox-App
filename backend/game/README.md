@@ -51,6 +51,17 @@ and levels, the starting weapon present, the time not longer than 10 minutes
 nor than the real time since the run started, and a run can only be finished
 once. Coins earned: 1 per 100 points.
 
+Characters live in the store service. When `STORE_API_URL` is set, starting a
+run asks the store which characters the player owns (`GET
+/api/store/me/characters`, signed in as the player with the shared
+`JWT_SECRET`): a character the player does not own is refused (`403`), a store
+that does not answer stops the run from starting (`503`), and the character's
+starting weapon is kept with the run, to check the result later. When the run
+is finished, its coins (score / 100) are added to the player's wallet in the
+store (`POST /api/store/internal/wallets/:userId/credit`, with the
+`INTERNAL_API_KEY` shared with the store). Without
+`STORE_API_URL` any character id starts a run and that check is skipped.
+
 When a run is finished it is also sent to the ranking service
 (`POST /api/ranking/runs` with the shared `INTERNAL_API_KEY`), if `RANKING_API_URL`
 is set in `.env.dev`. If the ranking is down the run is still saved here and
@@ -81,11 +92,10 @@ the error is only logged.
 - `passive_items`: each one raises one `stat` by `value` per level (`speed`,
   `damage`, `pickupRadius` and `xp` in fractions, `cooldown` and `armor` as a
   fraction compounded per level, `maxHp` in HP).
-- `characters`: the ids of the game frontend characters
-  (`frontend/game/src/game/content.ts`) and their starting weapon.
 - `runs`, `run_weapons`, `run_passive_items`: the runs and their final loadout.
   `user_id` comes from the token; users live in the auth service, so there is
-  no foreign key to them.
+  no foreign key to them. `character_id` is the id of a store character, so
+  there is no foreign key to it either.
 
 ## Checks
 

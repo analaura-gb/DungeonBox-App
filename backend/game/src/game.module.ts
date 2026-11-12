@@ -6,6 +6,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { StoreClient } from './store/store.client';
 
 @Module({
   imports: [
@@ -15,6 +16,12 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     }),
   ],
   controllers: [GameController],
-  providers: [GameService, JwtAuthGuard, RunsRepository, CatalogRepository],
+  providers: [
+    GameService,
+    JwtAuthGuard,
+    RunsRepository,
+    CatalogRepository,
+    StoreClient,
+  ],
 })
 export class GameModule {}

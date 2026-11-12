@@ -39,16 +39,16 @@ enum PassiveStat {
 }
 
 model Weapon {
-  id          String         @id
-  name        String
-  icon        String
-  color       String
-  description String
-  behavior    WeaponBehavior
-  minCooldown Float          @default(0) @map("min_cooldown")
+  id           String         @id
+  name         String
+  color        String
+  description  String
+  behavior     WeaponBehavior
+  minCooldown  Float          @default(0) @map("min_cooldown")
+  imageUrl     String?        @map("image_url")
+  shotImageUrl String?        @map("shot_image_url")
 
   levels     WeaponLevel[]
-  characters Character[]
   runWeapons RunWeapon[]
 
   @@map("weapons")
@@ -78,43 +78,32 @@ model WeaponLevel {
 model PassiveItem {
   id          String      @id
   name        String
-  icon        String
   color       String
   description String
   maxLevel    Int         @map("max_level")
   stat        PassiveStat
   value       Float
+  imageUrl    String?     @map("image_url")
 
   runPassiveItems RunPassiveItem[]
 
   @@map("passive_items")
 }
 
-model Character {
-  id            String @id
-  name          String
-  startWeaponId String @map("start_weapon_id")
-
-  startWeapon Weapon @relation(fields: [startWeaponId], references: [id])
-  runs        Run[]
-
-  @@map("characters")
-}
-
 model Run {
-  id           String    @id @default(uuid())
-  userId       String    @map("user_id")
-  characterId  String    @map("character_id")
-  status       RunStatus @default(IN_PROGRESS)
-  score        Int       @default(0)
-  kills        Int       @default(0)
-  levelReached Int       @default(1) @map("level_reached")
-  survivedTime Int       @default(0) @map("survived_time")
-  coinsEarned  Int       @default(0) @map("coins_earned")
-  startedAt    DateTime  @default(now()) @map("started_at")
-  finishedAt   DateTime? @map("finished_at")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  characterId   String    @map("character_id")
+  startWeaponId String?   @map("start_weapon_id")
+  status        RunStatus @default(IN_PROGRESS)
+  score         Int       @default(0)
+  kills         Int       @default(0)
+  levelReached  Int       @default(1) @map("level_reached")
+  survivedTime  Int       @default(0) @map("survived_time")
+  coinsEarned   Int       @default(0) @map("coins_earned")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
 
-  character    Character        @relation(fields: [characterId], references: [id])
   weapons      RunWeapon[]
   passiveItems RunPassiveItem[]
 
@@ -149,29 +138,30 @@ model RunPassiveItem {
 }
 
 model Enemy {
-  id        String @id
+  id        String  @id
   name      String
-  icon      String
   color     String
+  imageUrl  String? @map("image_url")
   hp        Int
   speed     Int
   damage    Int
   radius    Int
   xp        Int
   score     Int
-  minTime   Int    @default(0) @map("min_time")
-  weight    Int    @default(0) @map("spawn_weight")
-  splits    Int    @default(0)
-  bossOrder Int?   @unique @map("boss_order")
+  minTime   Int     @default(0) @map("min_time")
+  weight    Int     @default(0) @map("spawn_weight")
+  splits    Int     @default(0)
+  bossOrder Int?    @unique @map("boss_order")
 
   @@map("enemies")
 }
 
 model Pickup {
-  id         String @id
+  id         String  @id
   name       String
   value      Int
-  dropChance Float  @map("drop_chance")
+  dropChance Float   @map("drop_chance")
+  imageUrl   String? @map("image_url")
 
   @@map("pickups")
 }

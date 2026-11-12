@@ -22,22 +22,15 @@ export type FinishRunData = {
 export class RunsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findCharacter(id: string) {
-    return this.prisma.character.findUnique({
-      where: { id },
-    });
-  }
-
-  create(userId: string, characterId: string) {
+  create(userId: string, characterId: string, startWeaponId: string | null) {
     return this.prisma.run.create({
-      data: { userId, characterId },
+      data: { userId, characterId, startWeaponId },
     });
   }
 
   findByIdForUser(id: string, userId: string) {
     return this.prisma.run.findFirst({
       where: { id, userId },
-      include: { character: true },
     });
   }
 
