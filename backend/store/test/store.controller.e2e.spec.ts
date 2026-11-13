@@ -150,13 +150,6 @@ describe('StoreController E2E', () => {
         .set('Cookie', as)
         .send({ amount });
 
-    it('should refuse a call without a token', async () => {
-      await request(httpServer())
-        .post('/api/store/me/wallet/credit')
-        .send({ amount: 10 })
-        .expect(401);
-    });
-
     it('should refuse the token of the player who owns the wallet', async () => {
       await credit(10, cookie).expect(403);
 
@@ -201,6 +194,7 @@ describe('StoreController E2E', () => {
       ['get', '/api/store/characters'],
       ['get', '/api/store/me/wallet'],
       ['post', '/api/store/me/wallet'],
+      ['post', '/api/store/me/wallet/credit'],
       ['get', '/api/store/me/power-ups'],
       ['get', '/api/store/me/characters'],
       ['post', '/api/store/power-ups/any-id/purchase'],

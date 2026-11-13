@@ -13,9 +13,6 @@ import { SERVICE_ONLY } from './service-only.decorator';
 type JwtPayload = {
   sub: string;
   email?: string;
-  // So os tokens que um backend assina para si carregam essa claim. O auth
-  // emite apenas { sub, email }, entao ela separa "o game agindo por um
-  // jogador" de "o jogador agindo por si".
   svc?: string;
   iat?: number;
   exp?: number;
