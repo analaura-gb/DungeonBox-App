@@ -64,8 +64,10 @@ store (`POST /api/store/internal/wallets/:userId/credit`, with the
 
 When a run is finished it is also sent to the ranking service
 (`POST /api/ranking/runs` with the shared `INTERNAL_API_KEY`), if `RANKING_API_URL`
-is set in `.env.dev`. If the ranking is down the run is still saved here and
-the error is only logged.
+is set in `.env.dev`. Both calls (`src/ranking/ranking.client.ts` and
+`src/store/store.client.ts`) are awaited before `finish` answers; if the
+ranking or the store is down the run is still saved here and the error is only
+logged.
 
 ## Database
 

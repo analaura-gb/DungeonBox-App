@@ -297,10 +297,6 @@ describe('GameController E2E', () => {
         .send(result)
         .expect(200);
 
-      for (let i = 0; i < 50 && credits.length === 0; i++) {
-        await Bun.sleep(20);
-      }
-
       expect(credits).toEqual([
         {
           path: '/api/store/internal/wallets/user-1/credit',

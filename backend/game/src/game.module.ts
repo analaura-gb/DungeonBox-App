@@ -7,6 +7,7 @@ import { RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { StoreClient } from './store/store.client';
+import { RankingClient } from './ranking/ranking.client';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { StoreClient } from './store/store.client';
     RunsRepository,
     CatalogRepository,
     StoreClient,
+    RankingClient,
   ],
 })
 export class GameModule {}

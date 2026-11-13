@@ -17,7 +17,8 @@ import { FinishRunDto, RunItemDto } from './dto/finish-run.dto';
 import { StartRunDto } from './dto/start-run.dto';
 import { RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
-import { StoreClient } from './store/store.client';
+import { StoreCharacter, StoreClient } from './store/store.client';
+import { RankingClient } from './ranking/ranking.client';
 
 const TIME_LIMIT_SECONDS = 10 * 60;
 const TIME_TOLERANCE_SECONDS = 5;
@@ -32,6 +33,7 @@ export class GameService {
     private readonly runsRepository: RunsRepository,
     private readonly catalogRepository: CatalogRepository,
     private readonly storeClient: StoreClient,
+    private readonly rankingClient: RankingClient,
   ) {}
 
   async getCatalog() {
@@ -112,8 +114,8 @@ export class GameService {
       passiveItems: body.passiveItems,
     });
 
-    this.sendToRanking(finished);
-    this.creditCoins(finished);
+    await this.sendToRanking(finished);
+    await this.creditCoins(finished);
 
     return {
       ...this.toSummary(finished),
@@ -137,20 +139,13 @@ export class GameService {
     return runs.map((run) => this.toSummary(run));
   }
 
-  private sendToRanking(
+  private async sendToRanking(
     run: Run & { weapons: RunWeapon[]; passiveItems: RunPassiveItem[] },
   ) {
-    const rankingUrl = process.env.RANKING_API_URL;
+    if (!this.rankingClient.isConfigured()) return;
 
-    if (!rankingUrl) return;
-
-    fetch(`${rankingUrl}/api/ranking/runs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-internal-key': process.env.INTERNAL_API_KEY ?? '',
-      },
-      body: JSON.stringify({
+    try {
+      await this.rankingClient.recordRun({
         runId: run.id,
         userId: run.userId,
         characterId: run.characterId,
@@ -164,28 +159,28 @@ export class GameService {
           id: p.passiveItemId,
           level: p.level,
         })),
-      }),
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error(`status ${response.status}`);
-      })
-      .catch((error: Error) => {
-        this.logger.warn(
-          `Could not send run ${run.id} to the ranking: ${error.message}`,
-        );
       });
+    } catch (error) {
+      this.logger.warn(
+        `Could not send run ${run.id} to the ranking: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
-  private creditCoins(run: Run) {
+  private async creditCoins(run: Run) {
     if (!this.storeClient.isConfigured() || run.coinsEarned <= 0) return;
 
-    this.storeClient
-      .creditCoins(run.userId, run.coinsEarned)
-      .catch((error: Error) => {
-        this.logger.warn(
-          `Could not credit the coins of run ${run.id}: ${error.message}`,
-        );
-      });
+    try {
+      await this.storeClient.creditCoins(run.userId, run.coinsEarned);
+    } catch (error) {
+      this.logger.warn(
+        `Could not credit the coins of run ${run.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   private async findStartWeapon(
@@ -194,12 +189,21 @@ export class GameService {
   ) {
     if (!this.storeClient.isConfigured()) return null;
 
-    const characters = await this.storeClient
-      .listOwnedCharacters(user.sub, user.email)
-      .catch((error: Error) => {
-        this.logger.warn(`Could not reach the store: ${error.message}`);
-        throw new ServiceUnavailableException('Store is unavailable');
-      });
+    let characters: StoreCharacter[];
+
+    try {
+      characters = await this.storeClient.listOwnedCharacters(
+        user.sub,
+        user.email,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Could not reach the store: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      throw new ServiceUnavailableException('Store is unavailable');
+    }
 
     const character = characters.find((c) => c.id === characterId);
 

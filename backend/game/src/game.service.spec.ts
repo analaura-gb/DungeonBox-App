@@ -13,6 +13,7 @@ import { FinishRunData, RunsRepository } from './runs/runs.repository';
 import { CatalogRepository } from './catalog/catalog.repository';
 import { FinishRunDto } from './dto/finish-run.dto';
 import { StoreCharacter, StoreClient } from './store/store.client';
+import { RankingClient, RankingRun } from './ranking/ranking.client';
 
 describe('GameService', () => {
   let service: GameService;
@@ -140,9 +141,15 @@ describe('GameService', () => {
     creditCoins: mock((_userId: string, _amount: number) => Promise.resolve()),
   };
 
+  const rankingMock = {
+    isConfigured: mock(() => true),
+    recordRun: mock((_run: RankingRun) => Promise.resolve()),
+  };
+
   beforeEach(async () => {
     Object.values(repositoryMock).forEach((m) => m.mockClear());
     Object.values(storeMock).forEach((m) => m.mockClear());
+    Object.values(rankingMock).forEach((m) => m.mockClear());
     storeMock.isConfigured.mockImplementation(() => true);
     repositoryMock.findByIdForUser.mockImplementation(() =>
       Promise.resolve(run()),
@@ -154,6 +161,7 @@ describe('GameService', () => {
         { provide: RunsRepository, useValue: repositoryMock },
         { provide: CatalogRepository, useValue: catalogMock },
         { provide: StoreClient, useValue: storeMock },
+        { provide: RankingClient, useValue: rankingMock },
       ],
     }).compile();
 
@@ -239,32 +247,52 @@ describe('GameService', () => {
     });
 
     it('should send the run and its build to the ranking', async () => {
-      const originalFetch = globalThis.fetch;
-      const fetchMock = mock(() =>
-        Promise.resolve({ ok: true, status: 201 } as Response),
-      );
-      globalThis.fetch = fetchMock as unknown as typeof fetch;
-      process.env.RANKING_API_URL = 'http://ranking.test';
+      await service.finishRun('user-1', 'run-1', validResult());
 
-      try {
-        await service.finishRun('user-1', 'run-1', validResult());
+      expect(rankingMock.recordRun).toHaveBeenCalledTimes(1);
 
-        const [url, init] = fetchMock.mock.calls[0] as unknown as [
-          string,
-          RequestInit,
-        ];
-        const body = JSON.parse(init.body as string) as Record<string, unknown>;
+      const [sent] = rankingMock.recordRun.mock.calls[0];
 
-        expect(url).toBe('http://ranking.test/api/ranking/runs');
-        expect(body.weapons).toEqual([
-          { id: 'compiler', level: 3 },
-          { id: 'duck', level: 1 },
-        ]);
-        expect(body.passiveItems).toEqual(validResult().passiveItems);
-      } finally {
-        globalThis.fetch = originalFetch;
-        delete process.env.RANKING_API_URL;
-      }
+      expect(sent.runId).toBe('run-1');
+      expect(sent.userId).toBe('user-1');
+      expect(sent.weapons).toEqual([
+        { id: 'compiler', level: 3 },
+        { id: 'duck', level: 1 },
+      ]);
+      expect(sent.passiveItems).toEqual(validResult().passiveItems);
+    });
+
+    it('should wait for the ranking and the store before answering', async () => {
+      const order: string[] = [];
+      rankingMock.recordRun.mockImplementationOnce(async () => {
+        await Bun.sleep(40);
+        order.push('ranking');
+      });
+      storeMock.creditCoins.mockImplementationOnce(async () => {
+        await Bun.sleep(5);
+        order.push('store');
+      });
+
+      await service.finishRun('user-1', 'run-1', validResult());
+
+      expect(order).toEqual(['ranking', 'store']);
+    });
+
+    it('should still finish the run when the ranking cannot record it', async () => {
+      rankingMock.recordRun.mockRejectedValueOnce(new Error('Ranking is down'));
+
+      const result = await service.finishRun('user-1', 'run-1', validResult());
+
+      expect(result.coinsEarned).toBe(12);
+      expect(storeMock.creditCoins).toHaveBeenCalled();
+    });
+
+    it('should not send the run when no ranking is configured', async () => {
+      rankingMock.isConfigured.mockImplementationOnce(() => false);
+
+      await service.finishRun('user-1', 'run-1', validResult());
+
+      expect(rankingMock.recordRun).not.toHaveBeenCalled();
     });
 
     it('should still finish the run when the store cannot credit the coins', async () => {
