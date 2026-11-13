@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RunStatus {
+  IN_PROGRESS
+  WON
+  DIED
+}
+
+enum WeaponBehavior {
+  projectile
+  orbit
+  aura
+  pulse
+  melee
+  drone
+}
+
+enum WeaponEffect {
+  slow
+  burn
+  explode
+}
+
+enum PassiveStat {
+  speed
+  maxHp
+  cooldown
+  damage
+  pickupRadius
+  xp
+  armor
+}
+
+model Weapon {
+  id           String         @id
+  name         String
+  color        String
+  description  String
+  behavior     WeaponBehavior
+  minCooldown  Float          @default(0) @map("min_cooldown")
+  imageUrl     String?        @map("image_url")
+  shotImageUrl String?        @map("shot_image_url")
+
+  levels     WeaponLevel[]
+  runWeapons RunWeapon[]
+
+  @@map("weapons")
+}
+
+model WeaponLevel {
+  id          String        @id @default(uuid())
+  weaponId    String        @map("weapon_id")
+  level       Int
+  description String
+  cooldown    Float
+  damage      Float
+  count       Int           @default(1)
+  pierce      Int           @default(0)
+  area        Float         @default(0)
+  speed       Float         @default(0)
+  size        Float         @default(0)
+  knockback   Float         @default(0)
+  effect      WeaponEffect?
+
+  weapon Weapon @relation(fields: [weaponId], references: [id], onDelete: Cascade)
+
+  @@unique([weaponId, level])
+  @@map("weapon_levels")
+}
+
+model PassiveItem {
+  id          String      @id
+  name        String
+  color       String
+  description String
+  maxLevel    Int         @map("max_level")
+  stat        PassiveStat
+  value       Float
+  imageUrl    String?     @map("image_url")
+
+  runPassiveItems RunPassiveItem[]
+
+  @@map("passive_items")
+}
+
+model Run {
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
+  characterId   String    @map("character_id")
+  startWeaponId String?   @map("start_weapon_id")
+  status        RunStatus @default(IN_PROGRESS)
+  score         Int       @default(0)
+  kills         Int       @default(0)
+  levelReached  Int       @default(1) @map("level_reached")
+  survivedTime  Int       @default(0) @map("survived_time")
+  coinsEarned   Int       @default(0) @map("coins_earned")
+  startedAt     DateTime  @default(now()) @map("started_at")
+  finishedAt    DateTime? @map("finished_at")
+
+  weapons      RunWeapon[]
+  passiveItems RunPassiveItem[]
+
+  @@index([userId])
+  @@map("runs")
+}
+
+model RunWeapon {
+  id       String @id @default(uuid())
+  runId    String @map("run_id")
+  weaponId String @map("weapon_id")
+  level    Int
+
+  run    Run    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  weapon Weapon @relation(fields: [weaponId], references: [id])
+
+  @@unique([runId, weaponId])
+  @@map("run_weapons")
+}
+
+model RunPassiveItem {
+  id            String @id @default(uuid())
+  runId         String @map("run_id")
+  passiveItemId String @map("passive_item_id")
+  level         Int
+
+  run         Run         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  passiveItem PassiveItem @relation(fields: [passiveItemId], references: [id])
+
+  @@unique([runId, passiveItemId])
+  @@map("run_passive_items")
+}
+
+model Enemy {
+  id        String  @id
+  name      String
+  color     String
+  imageUrl  String? @map("image_url")
+  hp        Int
+  speed     Int
+  damage    Int
+  radius    Int
+  xp        Int
+  score     Int
+  minTime   Int     @default(0) @map("min_time")
+  weight    Int     @default(0) @map("spawn_weight")
+  splits    Int     @default(0)
+  bossOrder Int?    @unique @map("boss_order")
+
+  @@map("enemies")
+}
+
+model Pickup {
+  id         String  @id
+  name       String
+  value      Int
+  dropChance Float   @map("drop_chance")
+  imageUrl   String? @map("image_url")
+
+  @@map("pickups")
+}

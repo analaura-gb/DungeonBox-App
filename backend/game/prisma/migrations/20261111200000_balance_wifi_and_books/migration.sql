@@ -1,0 +1,17 @@
+UPDATE "weapon_levels" SET "description" = '2 books orbit you.', "damage" = 13.5, "count" = 2, "speed" = 2.7 WHERE "weapon_id" = 'duck' AND "level" = 1;
+UPDATE "weapon_levels" SET "description" = '+damage, faster orbit.', "damage" = 17.0, "count" = 2, "speed" = 2.9 WHERE "weapon_id" = 'duck' AND "level" = 2;
+UPDATE "weapon_levels" SET "description" = '+1 book.', "damage" = 20.5, "count" = 3, "speed" = 3.1 WHERE "weapon_id" = 'duck' AND "level" = 3;
+UPDATE "weapon_levels" SET "description" = '+30% damage, bigger books.', "damage" = 31.2, "count" = 3, "speed" = 3.3 WHERE "weapon_id" = 'duck' AND "level" = 4;
+UPDATE "weapon_levels" SET "description" = '+1 book.', "damage" = 35.8, "count" = 4, "speed" = 3.5 WHERE "weapon_id" = 'duck' AND "level" = 5;
+UPDATE "weapon_levels" SET "description" = '+damage, faster orbit.', "damage" = 40.3, "count" = 4, "speed" = 3.7 WHERE "weapon_id" = 'duck' AND "level" = 6;
+UPDATE "weapon_levels" SET "description" = '+1 book.', "damage" = 44.9, "count" = 5, "speed" = 3.9 WHERE "weapon_id" = 'duck' AND "level" = 7;
+UPDATE "weapon_levels" SET "description" = 'Library of 6 books.', "damage" = 49.4, "count" = 6, "speed" = 4.1 WHERE "weapon_id" = 'duck' AND "level" = 8;
+UPDATE "weapon_levels" SET "description" = 'Ring of 2.4GHz pain.', "cooldown" = 3.22, "damage" = 9, "count" = 1, "area" = 186, "knockback" = 162 WHERE "weapon_id" = 'wifi' AND "level" = 1;
+UPDATE "weapon_levels" SET "description" = '+damage, +knockback.', "cooldown" = 3.04, "damage" = 14, "count" = 1, "area" = 202, "knockback" = 174 WHERE "weapon_id" = 'wifi' AND "level" = 2;
+UPDATE "weapon_levels" SET "description" = 'Faster broadcast interval.', "cooldown" = 2.86, "damage" = 19, "count" = 1, "area" = 218, "knockback" = 186 WHERE "weapon_id" = 'wifi' AND "level" = 3;
+UPDATE "weapon_levels" SET "description" = '5GHz: +range, +damage.', "cooldown" = 2.68, "damage" = 24, "count" = 1, "area" = 234, "knockback" = 198 WHERE "weapon_id" = 'wifi' AND "level" = 4;
+UPDATE "weapon_levels" SET "description" = 'Faster broadcast interval.', "cooldown" = 2.5, "damage" = 29, "count" = 1, "area" = 250, "knockback" = 210 WHERE "weapon_id" = 'wifi' AND "level" = 5;
+UPDATE "weapon_levels" SET "description" = 'Double ring.', "cooldown" = 2.32, "damage" = 34, "count" = 2, "area" = 266, "knockback" = 222 WHERE "weapon_id" = 'wifi' AND "level" = 6;
+UPDATE "weapon_levels" SET "description" = '+range, +damage.', "cooldown" = 2.14, "damage" = 39, "count" = 2, "area" = 282, "knockback" = 234 WHERE "weapon_id" = 'wifi' AND "level" = 7;
+UPDATE "weapon_levels" SET "description" = 'Mesh network: stronger rings.', "cooldown" = 1.96, "damage" = 44, "count" = 2, "area" = 298, "knockback" = 246 WHERE "weapon_id" = 'wifi' AND "level" = 8;
+UPDATE "weapons" SET "min_cooldown" = 1.4 WHERE "id" = 'wifi';
