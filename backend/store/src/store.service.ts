@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -44,6 +45,10 @@ export class StoreService {
     return { coins: created.coins };
   }
 
+  creditCoins(userId: string, amount: number) {
+    return this.walletsRepository.credit(userId, amount);
+  }
+
   async listOwnedPowerUps(userId: string) {
     const owned = await this.libraryRepository.findPowerUpsByUser(userId);
 
@@ -51,9 +56,21 @@ export class StoreService {
   }
 
   async listOwnedCharacters(userId: string) {
-    const owned = await this.libraryRepository.findCharactersByUser(userId);
+    const [free, owned] = await Promise.all([
+      this.catalogRepository.findFreeCharacters(),
+      this.libraryRepository.findCharactersByUser(userId),
+    ]);
 
-    return owned.map((entry) => this.toCharacterResponse(entry.character));
+    const characters = new Map(
+      [...free, ...owned.map((entry) => entry.character)].map((character) => [
+        character.id,
+        character,
+      ]),
+    );
+
+    return [...characters.values()].map((character) =>
+      this.toCharacterResponse(character),
+    );
   }
 
   async purchasePowerUp(userId: string, powerUpId: string) {
@@ -61,6 +78,17 @@ export class StoreService {
 
     if (!powerUp) {
       throw new NotFoundException('Power-up not found');
+    }
+
+    if (powerUp.requiredPowerUpId) {
+      const previous = await this.libraryRepository.findPowerUpOwnership(
+        userId,
+        powerUp.requiredPowerUpId,
+      );
+
+      if (!previous) {
+        throw new ForbiddenException('Buy the previous power-up first');
+      }
     }
 
     const wallet = await this.walletsRepository.findByUserId(userId);
@@ -97,6 +125,10 @@ export class StoreService {
 
     if (!character) {
       throw new NotFoundException('Character not found');
+    }
+
+    if (character.price === 0) {
+      throw new ConflictException('Character already owned');
     }
 
     const wallet = await this.walletsRepository.findByUserId(userId);
@@ -139,7 +171,9 @@ export class StoreService {
       attackSpeed: powerUp.attackSpeed,
       projectileSpeed: powerUp.projectileSpeed,
       projectileSize: powerUp.projectileSize,
+      regeneration: powerUp.regeneration,
       imageUrl: powerUp.imageUrl,
+      requiredPowerUpId: powerUp.requiredPowerUpId,
     };
   }
 
@@ -147,9 +181,19 @@ export class StoreService {
     return {
       id: character.id,
       name: character.name,
+      title: character.title,
+      description: character.description,
+      color: character.color,
       price: character.price,
       initialWeaponId: character.initialWeaponId,
+      hp: character.hp,
+      speed: character.speed,
+      damageMul: character.damageMul,
+      xpMul: character.xpMul,
+      pickupRadius: character.pickupRadius,
       imageUrl: character.imageUrl,
+      spriteUrl: character.spriteUrl,
+      walkSpriteUrl: character.walkSpriteUrl,
     };
   }
 
