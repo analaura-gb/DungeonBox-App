@@ -28,16 +28,21 @@ const items = [
 type FrontendMenuProps = {
   isAuthenticated: boolean;
   isLoading: boolean;
+  vertical?: boolean;
 };
 
 export function FrontendMenu({
   isAuthenticated,
   isLoading,
+  vertical = false,
 }: FrontendMenuProps) {
   const currentPath = window.location.pathname;
 
   return (
-    <nav aria-label="Services" className="flex gap-3">
+    <nav
+      aria-label="Services"
+      className={vertical ? "flex flex-col gap-2" : "flex gap-3"}
+    >
       {items.map((item) => {
         const active = currentPath.startsWith(item.path);
         const disabled = item.protected && (!isAuthenticated || isLoading);
@@ -49,7 +54,7 @@ export function FrontendMenu({
               type="button"
               disabled
               title="Sign in to access this area"
-              className="cursor-not-allowed rounded-xl px-4 py-2 text-sm font-medium text-slate-500 opacity-60"
+              className="cursor-not-allowed rounded-xl px-4 py-2 text-left text-sm font-medium text-slate-500 opacity-60"
             >
               {item.label}
             </button>

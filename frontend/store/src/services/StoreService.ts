@@ -11,7 +11,9 @@ export type PowerUp = {
   attackSpeed: number;
   projectileSpeed: number;
   projectileSize: number;
+  regeneration: number;
   imageUrl: string | null;
+  requiredPowerUpId: string | null;
 };
 
 export type Character = {
