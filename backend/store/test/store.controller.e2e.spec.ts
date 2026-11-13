@@ -23,6 +23,7 @@ describe('StoreController E2E', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let cookie: string;
+  let serviceCookie: string;
 
   const userId = 'e2e-user-1';
 
@@ -42,11 +43,20 @@ describe('StoreController E2E', () => {
 
     await app.init();
 
-    const token = await new JwtService({
-      secret: process.env.JWT_SECRET,
-    }).signAsync({ sub: userId, email: 'e2e@email.com' });
+    const jwtService = new JwtService({ secret: process.env.JWT_SECRET });
+
+    const token = await jwtService.signAsync({
+      sub: userId,
+      email: 'e2e@email.com',
+    });
+
+    const serviceToken = await jwtService.signAsync({
+      sub: userId,
+      svc: 'game',
+    });
 
     cookie = `access_token=${token}`;
+    serviceCookie = `access_token=${serviceToken}`;
   });
 
   beforeEach(async () => {
@@ -134,14 +144,25 @@ describe('StoreController E2E', () => {
   });
 
   describe('credit coins', () => {
-    const credit = (amount: unknown, key = process.env.INTERNAL_API_KEY) =>
+    const credit = (amount: unknown, as = serviceCookie) =>
       request(httpServer())
-        .post(`/api/store/internal/wallets/${userId}/credit`)
-        .set('x-internal-key', key ?? '')
+        .post('/api/store/me/wallet/credit')
+        .set('Cookie', as)
         .send({ amount });
 
-    it('should refuse a call without the internal key', async () => {
-      await credit(10, 'wrong-key').expect(401);
+    it('should refuse a call without a token', async () => {
+      await request(httpServer())
+        .post('/api/store/me/wallet/credit')
+        .send({ amount: 10 })
+        .expect(401);
+    });
+
+    it('should refuse the token of the player who owns the wallet', async () => {
+      await credit(10, cookie).expect(403);
+
+      const wallet = await prisma.wallet.findUnique({ where: { userId } });
+
+      expect(wallet).toBeNull();
     });
 
     it('should refuse an amount that is not a positive integer', async () => {

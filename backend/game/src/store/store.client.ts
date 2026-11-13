@@ -37,13 +37,18 @@ export class StoreClient {
   }
 
   async creditCoins(userId: string, amount: number) {
+    const token = await this.jwtService.signAsync({
+      sub: userId,
+      svc: 'game',
+    });
+
     const response = await fetch(
-      `${process.env.STORE_API_URL}/api/store/internal/wallets/${userId}/credit`,
+      `${process.env.STORE_API_URL}/api/store/me/wallet/credit`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-internal-key': process.env.INTERNAL_API_KEY ?? '',
+          Cookie: `access_token=${token}`,
         },
         body: JSON.stringify({ amount }),
         signal: AbortSignal.timeout(StoreClient.TIMEOUT_MS),

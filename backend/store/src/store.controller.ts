@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -11,6 +12,8 @@ import {
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedRequest } from './guards/jwt-auth.guard';
+import { ServiceOnly } from './guards/service-only.decorator';
+import { CreditCoinsDto } from './dto/credit-coins.dto';
 
 @Controller('store')
 @UseGuards(JwtAuthGuard)
@@ -36,6 +39,16 @@ export class StoreController {
   @HttpCode(HttpStatus.OK)
   createWallet(@Req() request: AuthenticatedRequest) {
     return this.storeService.getOrCreateWallet(request.user.sub);
+  }
+
+  @Post('me/wallet/credit')
+  @ServiceOnly()
+  @HttpCode(HttpStatus.OK)
+  creditCoins(
+    @Req() request: AuthenticatedRequest,
+    @Body() body: CreditCoinsDto,
+  ) {
+    return this.storeService.creditCoins(request.user.sub, body.amount);
   }
 
   @Get('me/power-ups')
