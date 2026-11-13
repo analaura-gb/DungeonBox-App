@@ -1,0 +1,29 @@
+services:
+  ranking-db:
+    image: postgres:16
+    container_name: ranking-db
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: ranking_db
+    ports:
+      - '5436:5432'
+    volumes:
+      - ranking-db-data:/var/lib/postgresql/data
+
+  ranking-db-test:
+    image: postgres:16
+    container_name: ranking-db-test
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      POSTGRES_DB: ranking_db_test
+    ports:
+      - '5437:5432'
+    volumes:
+      - ranking-db-test-data:/var/lib/postgresql/data
+
+volumes:
+  ranking-db-data:
+  ranking-db-test-data:
