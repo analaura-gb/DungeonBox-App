@@ -28,10 +28,6 @@ export class RecordRunDto {
 
   @IsString()
   @IsNotEmpty()
-  userId: string;
-
-  @IsString()
-  @IsNotEmpty()
   characterId: string;
 
   @IsBoolean()

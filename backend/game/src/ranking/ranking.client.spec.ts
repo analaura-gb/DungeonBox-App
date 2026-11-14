@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { JwtService } from '@nestjs/jwt';
 import { RankingClient, RankingRun } from './ranking.client';
 
 describe('RankingClient', () => {
   const originalFetch = globalThis.fetch;
   const originalUrl = process.env.RANKING_API_URL;
-  const originalKey = process.env.INTERNAL_API_KEY;
+
+  const signAsync = mock(() => Promise.resolve('signed-token'));
+  const jwtService = { signAsync } as unknown as JwtService;
 
   const run: RankingRun = {
     runId: 'run-1',
-    userId: 'user-1',
     characterId: 'ana-laura',
     won: false,
     score: 1200,
@@ -36,8 +38,7 @@ describe('RankingClient', () => {
 
   beforeEach(() => {
     process.env.RANKING_API_URL = 'http://ranking.test:3002';
-    process.env.INTERNAL_API_KEY = 'secret-key';
-    client = new RankingClient();
+    client = new RankingClient(jwtService);
   });
 
   afterEach(() => {
@@ -45,9 +46,6 @@ describe('RankingClient', () => {
 
     if (originalUrl === undefined) delete process.env.RANKING_API_URL;
     else process.env.RANKING_API_URL = originalUrl;
-
-    if (originalKey === undefined) delete process.env.INTERNAL_API_KEY;
-    else process.env.INTERNAL_API_KEY = originalKey;
   });
 
   it('is configured only when the ranking url is set', () => {
@@ -58,28 +56,31 @@ describe('RankingClient', () => {
     expect(client.isConfigured()).toBe(false);
   });
 
-  it('records a run with the internal key', async () => {
+  it('records a run with a service token for the owner of the run', async () => {
     const fetchMock = stubFetch();
 
-    await client.recordRun(run);
+    await client.recordRun('user-1', run);
 
     const [url, init] = fetchMock.mock.calls[0] as unknown as [
       string,
       RequestInit,
     ];
 
-    expect(url).toBe('http://ranking.test:3002/api/ranking/runs');
+    expect(url).toBe('http://ranking.test:3002/api/ranking/me/runs');
     expect(init.method).toBe('POST');
     expect(init.headers).toEqual({
       'Content-Type': 'application/json',
-      'x-internal-key': 'secret-key',
+      Cookie: 'access_token=signed-token',
     });
+    expect(signAsync).toHaveBeenCalledWith({ sub: 'user-1', svc: 'game' });
     expect(init.body).toBe(JSON.stringify(run));
   });
 
   it('fails when the ranking does not answer with success', async () => {
     stubFetch(409);
 
-    await expect(client.recordRun(run)).rejects.toThrow('Ranking answered 409');
+    await expect(client.recordRun('user-1', run)).rejects.toThrow(
+      'Ranking answered 409',
+    );
   });
 });

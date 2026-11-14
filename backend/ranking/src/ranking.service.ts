@@ -11,7 +11,7 @@ const RANKING_LIMIT = 10;
 export class RankingService {
   constructor(private readonly runStatsRepository: RunStatsRepository) {}
 
-  async recordRun(data: RecordRunDto) {
+  async recordRun(userId: string, data: RecordRunDto) {
     const alreadyRecorded = await this.runStatsRepository.findByRunId(
       data.runId,
     );
@@ -20,7 +20,7 @@ export class RankingService {
       throw new ConflictException('Run already recorded');
     }
 
-    await this.runStatsRepository.create(data);
+    await this.runStatsRepository.create({ ...data, userId });
 
     return { message: 'Run recorded' };
   }

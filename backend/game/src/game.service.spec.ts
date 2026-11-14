@@ -143,7 +143,7 @@ describe('GameService', () => {
 
   const rankingMock = {
     isConfigured: mock(() => true),
-    recordRun: mock((_run: RankingRun) => Promise.resolve()),
+    recordRun: mock((_userId: string, _run: RankingRun) => Promise.resolve()),
   };
 
   beforeEach(async () => {
@@ -251,10 +251,10 @@ describe('GameService', () => {
 
       expect(rankingMock.recordRun).toHaveBeenCalledTimes(1);
 
-      const [sent] = rankingMock.recordRun.mock.calls[0];
+      const [userId, sent] = rankingMock.recordRun.mock.calls[0];
 
+      expect(userId).toBe('user-1');
       expect(sent.runId).toBe('run-1');
-      expect(sent.userId).toBe('user-1');
       expect(sent.weapons).toEqual([
         { id: 'compiler', level: 3 },
         { id: 'duck', level: 1 },

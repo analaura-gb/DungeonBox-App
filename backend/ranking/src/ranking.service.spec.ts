@@ -10,7 +10,6 @@ describe('RankingService', () => {
 
   const run: RecordRunDto = {
     runId: '6f1c2f43-31a4-4f6e-9a55-2f1f7c1a9b10',
-    userId: 'user-1',
     characterId: 'ana-laura',
     won: false,
     score: 1500,
@@ -87,10 +86,13 @@ describe('RankingService', () => {
   });
 
   describe('recordRun', () => {
-    it('should save a finished run', async () => {
-      const result = await service.recordRun(run);
+    it('should save a finished run under the owner of the token', async () => {
+      const result = await service.recordRun('user-1', run);
 
-      expect(repositoryMock.create).toHaveBeenCalledWith(run);
+      expect(repositoryMock.create).toHaveBeenCalledWith({
+        ...run,
+        userId: 'user-1',
+      });
       expect(result).toEqual({ message: 'Run recorded' });
     });
 
@@ -99,7 +101,9 @@ describe('RankingService', () => {
         Promise.resolve({ id: 'existing' }),
       );
 
-      await expect(service.recordRun(run)).rejects.toThrow(ConflictException);
+      await expect(service.recordRun('user-1', run)).rejects.toThrow(
+        ConflictException,
+      );
       expect(repositoryMock.create).not.toHaveBeenCalled();
     });
   });

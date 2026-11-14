@@ -5,7 +5,6 @@ import { RankingService } from './ranking.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { RunStatsRepository } from './run-stats/run-stats.repository';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { InternalKeyGuard } from './guards/internal-key.guard';
 
 @Module({
   imports: [
@@ -15,11 +14,6 @@ import { InternalKeyGuard } from './guards/internal-key.guard';
     }),
   ],
   controllers: [RankingController],
-  providers: [
-    RankingService,
-    JwtAuthGuard,
-    InternalKeyGuard,
-    RunStatsRepository,
-  ],
+  providers: [RankingService, JwtAuthGuard, RunStatsRepository],
 })
 export class RankingModule {}
