@@ -8,7 +8,7 @@ export class CatalogRepository {
   findPowerUps() {
     return this.prisma.powerUp.findMany({
       where: { deletedAt: null },
-      orderBy: { price: 'asc' },
+      orderBy: [{ name: 'asc' }, { price: 'asc' }],
     });
   }
 
@@ -21,7 +21,14 @@ export class CatalogRepository {
   findCharacters() {
     return this.prisma.character.findMany({
       where: { deletedAt: null },
-      orderBy: { price: 'asc' },
+      orderBy: [{ price: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  findFreeCharacters() {
+    return this.prisma.character.findMany({
+      where: { price: 0, deletedAt: null },
+      orderBy: { name: 'asc' },
     });
   }
 

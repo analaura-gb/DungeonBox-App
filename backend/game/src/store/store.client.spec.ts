@@ -5,7 +5,6 @@ import { StoreClient } from './store.client';
 describe('StoreClient', () => {
   const originalFetch = globalThis.fetch;
   const originalUrl = process.env.STORE_API_URL;
-  const originalKey = process.env.INTERNAL_API_KEY;
 
   const signAsync = mock(() => Promise.resolve('signed-token'));
   const jwtService = { signAsync } as unknown as JwtService;
@@ -33,9 +32,6 @@ describe('StoreClient', () => {
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
-
-    if (originalKey === undefined) delete process.env.INTERNAL_API_KEY;
-    else process.env.INTERNAL_API_KEY = originalKey;
 
     if (originalUrl === undefined) {
       delete process.env.STORE_API_URL;
@@ -79,8 +75,7 @@ describe('StoreClient', () => {
     ]);
   });
 
-  it('credits coins to a wallet with the internal key', async () => {
-    process.env.INTERNAL_API_KEY = 'secret-key';
+  it('credits coins with a service token for the owner of the run', async () => {
     const fetchMock = stubFetch(200, { coins: 42 });
 
     await client.creditCoins('user-1', 12);
@@ -90,14 +85,13 @@ describe('StoreClient', () => {
       RequestInit,
     ];
 
-    expect(url).toBe(
-      'http://store.test:3001/api/store/internal/wallets/user-1/credit',
-    );
+    expect(url).toBe('http://store.test:3001/api/store/me/wallet/credit');
     expect(init.method).toBe('POST');
     expect(init.headers).toEqual({
       'Content-Type': 'application/json',
-      'x-internal-key': 'secret-key',
+      Cookie: 'access_token=signed-token',
     });
+    expect(signAsync).toHaveBeenCalledWith({ sub: 'user-1', svc: 'game' });
     expect(init.body).toBe(JSON.stringify({ amount: 12 }));
   });
 

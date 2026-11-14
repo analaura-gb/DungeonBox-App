@@ -1,15 +1,19 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { SERVICE_ONLY } from './service-only.decorator';
 
 type JwtPayload = {
   sub: string;
-  email: string;
+  email?: string;
+  svc?: string;
   iat?: number;
   exp?: number;
 };
@@ -20,7 +24,10 @@ export type AuthenticatedRequest = Request & {
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
@@ -31,14 +38,30 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Unauthorized');
     }
 
-    try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(token);
-      request.user = payload;
+    let payload: JwtPayload;
 
-      return true;
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(token);
     } catch {
       throw new UnauthorizedException('Unauthorized');
     }
+
+    request.user = payload;
+
+    if (this.isServiceOnly(context) && !payload.svc) {
+      throw new ForbiddenException('Service token required');
+    }
+
+    return true;
+  }
+
+  private isServiceOnly(context: ExecutionContext): boolean {
+    return (
+      this.reflector.getAllAndOverride<boolean>(SERVICE_ONLY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? false
+    );
   }
 
   private extractTokenFromCookie(cookieHeader?: string): string | null {
