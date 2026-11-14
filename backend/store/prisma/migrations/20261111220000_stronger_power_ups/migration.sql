@@ -1,0 +1,9 @@
+UPDATE "power_ups" SET "attack" = 2, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'controller-1';
+UPDATE "power_ups" SET "attack" = 4, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'controller-2';
+UPDATE "power_ups" SET "attack" = 8, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'controller-3';
+UPDATE "power_ups" SET "defense" = 1, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'antivirus-1';
+UPDATE "power_ups" SET "defense" = 2, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'antivirus-2';
+UPDATE "power_ups" SET "defense" = 3, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'antivirus-3';
+UPDATE "power_ups" SET "health" = 10, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'ram-1';
+UPDATE "power_ups" SET "health" = 20, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'ram-2';
+UPDATE "power_ups" SET "health" = 30, "updated_at" = CURRENT_TIMESTAMP WHERE "id" = 'ram-3';

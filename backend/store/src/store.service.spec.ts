@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { StoreService } from './store.service';
 import { CatalogRepository } from './catalog/catalog.repository';
 import { LibraryRepository } from './library/library.repository';
@@ -28,7 +32,9 @@ describe('StoreService', () => {
     attackSpeed: 1.2,
     projectileSpeed: 1,
     projectileSize: 1,
+    regeneration: 0,
     imageUrl: '/assets/catalog/coffee.png',
+    requiredPowerUpId: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     deletedAt: null,
@@ -37,9 +43,19 @@ describe('StoreService', () => {
   const character: Character = {
     id: 'character-1',
     name: 'Knight',
+    title: 'Royal Guard',
+    description: 'Slow and sturdy.',
+    color: '#ffd84d',
     price: 250,
     initialWeaponId: 'weapon-1',
+    hp: 140,
+    speed: 180,
+    damageMul: 1.1,
+    xpMul: 1,
+    pickupRadius: 90,
     imageUrl: null,
+    spriteUrl: null,
+    walkSpriteUrl: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     deletedAt: null,
@@ -56,15 +72,34 @@ describe('StoreService', () => {
     attackSpeed: 1.2,
     projectileSpeed: 1,
     projectileSize: 1,
+    regeneration: 0,
     imageUrl: '/assets/catalog/coffee.png',
+    requiredPowerUpId: null,
   };
 
   const characterResponse = {
     id: 'character-1',
     name: 'Knight',
+    title: 'Royal Guard',
+    description: 'Slow and sturdy.',
+    color: '#ffd84d',
     price: 250,
     initialWeaponId: 'weapon-1',
+    hp: 140,
+    speed: 180,
+    damageMul: 1.1,
+    xpMul: 1,
+    pickupRadius: 90,
     imageUrl: null,
+    spriteUrl: null,
+    walkSpriteUrl: null,
+  };
+
+  const freeCharacter: Character = {
+    ...character,
+    id: 'character-free',
+    name: 'Squire',
+    price: 0,
   };
 
   const wallet: Wallet = {
@@ -85,6 +120,9 @@ describe('StoreService', () => {
     ),
     findCharacterById: mock(
       (_id: string): Promise<Character | null> => Promise.resolve(character),
+    ),
+    findFreeCharacters: mock(
+      (): Promise<Character[]> => Promise.resolve([freeCharacter]),
     ),
   };
 
@@ -122,6 +160,10 @@ describe('StoreService', () => {
       (_userId: string, amount: number): Promise<{ coins: number }> =>
         Promise.resolve({ coins: wallet.coins - amount }),
     ),
+    credit: mock(
+      (_userId: string, amount: number): Promise<{ coins: number }> =>
+        Promise.resolve({ coins: wallet.coins + amount }),
+    ),
   };
 
   const prismaMock = {
@@ -152,6 +194,15 @@ describe('StoreService', () => {
     }).compile();
 
     service = module.get<StoreService>(StoreService);
+  });
+
+  describe('creditCoins', () => {
+    it('should add the coins to the wallet of the user', async () => {
+      const result = await service.creditCoins('user-1', 40);
+
+      expect(walletsRepositoryMock.credit).toHaveBeenCalledWith('user-1', 40);
+      expect(result).toEqual({ coins: wallet.coins + 40 });
+    });
   });
 
   describe('getOrCreateWallet', () => {
@@ -209,14 +260,64 @@ describe('StoreService', () => {
   });
 
   describe('listOwnedCharacters', () => {
-    it('should unwrap the ownership row into the catalog fields', async () => {
+    it('should list the free characters and unwrap the ownership rows', async () => {
       const result = await service.listOwnedCharacters('user-1');
 
-      expect(result).toEqual([characterResponse]);
+      expect(result.map((c) => c.id)).toEqual([
+        'character-free',
+        'character-1',
+      ]);
+      expect(result[1]).toEqual(characterResponse);
+    });
+
+    it('should list a free character once even if it was bought before it became free', async () => {
+      libraryRepositoryMock.findCharactersByUser.mockResolvedValueOnce([
+        { character: freeCharacter },
+      ]);
+
+      const result = await service.listOwnedCharacters('user-1');
+
+      expect(result.map((c) => c.id)).toEqual(['character-free']);
     });
   });
 
   describe('purchasePowerUp', () => {
+    const nextTier = {
+      ...powerUp,
+      id: 'power-up-2',
+      requiredPowerUpId: 'power-up-1',
+    };
+
+    it('should refuse a tier whose previous power-up is not owned', async () => {
+      catalogRepositoryMock.findPowerUpById.mockResolvedValueOnce(nextTier);
+
+      await expect(
+        service.purchasePowerUp('user-1', 'power-up-2'),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(libraryRepositoryMock.findPowerUpOwnership).toHaveBeenCalledWith(
+        'user-1',
+        'power-up-1',
+      );
+      expect(walletsRepositoryMock.debit).not.toHaveBeenCalled();
+    });
+
+    it('should sell a tier once the previous power-up is owned', async () => {
+      catalogRepositoryMock.findPowerUpById.mockResolvedValueOnce(nextTier);
+      libraryRepositoryMock.findPowerUpOwnership
+        .mockResolvedValueOnce({
+          id: 'ownership-1',
+          userId: 'user-1',
+          powerUpId: 'power-up-1',
+          createdAt: new Date(),
+        })
+        .mockResolvedValueOnce(null);
+
+      await service.purchasePowerUp('user-1', 'power-up-2');
+
+      expect(libraryRepositoryMock.grantPowerUp).toHaveBeenCalled();
+    });
+
     it('should report the balance the debit returned', async () => {
       walletsRepositoryMock.debit.mockResolvedValueOnce({ coins: 400 });
 
@@ -347,6 +448,18 @@ describe('StoreService', () => {
       await expect(
         service.purchaseCharacter('user-1', 'missing'),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should reject buying a free character, since everyone owns it', async () => {
+      catalogRepositoryMock.findCharacterById.mockResolvedValueOnce(
+        freeCharacter,
+      );
+
+      await expect(
+        service.purchaseCharacter('user-1', 'character-free'),
+      ).rejects.toThrow(ConflictException);
+
+      expect(walletsRepositoryMock.debit).not.toHaveBeenCalled();
     });
 
     it('should reject a character the user already owns', async () => {

@@ -264,7 +264,7 @@ describe('GameController E2E', () => {
   });
 
   it("should add the coins of a finished run to the player's store wallet", async () => {
-    const credits: { path: string; key: string | null; body: unknown }[] = [];
+    const credits: { path: string; token: string; body: unknown }[] = [];
     const store = Bun.serve({
       port: 0,
       async fetch(req) {
@@ -273,7 +273,10 @@ describe('GameController E2E', () => {
         if (path.endsWith('/credit')) {
           credits.push({
             path,
-            key: req.headers.get('x-internal-key'),
+            token: (req.headers.get('cookie') ?? '').replace(
+              'access_token=',
+              '',
+            ),
             body: await req.json(),
           });
 
@@ -286,7 +289,6 @@ describe('GameController E2E', () => {
       },
     });
     process.env.STORE_API_URL = `http://localhost:${store.port}`;
-    process.env.INTERNAL_API_KEY = 'e2e-internal-key';
 
     try {
       const run = await startRun();
@@ -297,16 +299,23 @@ describe('GameController E2E', () => {
         .send(result)
         .expect(200);
 
-      expect(credits).toEqual([
-        {
-          path: '/api/store/internal/wallets/user-1/credit',
-          key: 'e2e-internal-key',
-          body: { amount: 25 },
-        },
+      expect(credits.map(({ path, body }) => ({ path, body }))).toEqual([
+        { path: '/api/store/me/wallet/credit', body: { amount: 25 } },
+      ]);
+
+      const jwtService = new JwtService({ secret: process.env.JWT_SECRET });
+
+      const payloads = await Promise.all(
+        credits.map(({ token }) =>
+          jwtService.verifyAsync<{ sub: string; svc?: string }>(token),
+        ),
+      );
+
+      expect(payloads.map(({ sub, svc }) => ({ sub, svc }))).toEqual([
+        { sub: 'user-1', svc: 'game' },
       ]);
     } finally {
       delete process.env.STORE_API_URL;
-      delete process.env.INTERNAL_API_KEY;
       await store.stop(true);
     }
   });

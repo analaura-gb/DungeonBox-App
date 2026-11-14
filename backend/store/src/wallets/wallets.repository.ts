@@ -22,6 +22,15 @@ export class WalletsRepository {
     });
   }
 
+  credit(userId: string, amount: number) {
+    return this.prisma.wallet.upsert({
+      where: { userId },
+      update: { coins: { increment: amount } },
+      create: { userId, coins: amount },
+      select: { coins: true },
+    });
+  }
+
   debit(userId: string, amount: number, db: Db = this.prisma) {
     return db.wallet.update({
       where: { userId },

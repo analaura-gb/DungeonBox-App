@@ -23,6 +23,7 @@ describe('StoreController E2E', () => {
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let cookie: string;
+  let serviceCookie: string;
 
   const userId = 'e2e-user-1';
 
@@ -42,11 +43,20 @@ describe('StoreController E2E', () => {
 
     await app.init();
 
-    const token = await new JwtService({
-      secret: process.env.JWT_SECRET,
-    }).signAsync({ sub: userId, email: 'e2e@email.com' });
+    const jwtService = new JwtService({ secret: process.env.JWT_SECRET });
+
+    const token = await jwtService.signAsync({
+      sub: userId,
+      email: 'e2e@email.com',
+    });
+
+    const serviceToken = await jwtService.signAsync({
+      sub: userId,
+      svc: 'game',
+    });
 
     cookie = `access_token=${token}`;
+    serviceCookie = `access_token=${serviceToken}`;
   });
 
   beforeEach(async () => {
@@ -77,6 +87,93 @@ describe('StoreController E2E', () => {
     });
   }
 
+  async function seedCharacter(id: string, price: number) {
+    return prisma.character.create({
+      data: {
+        id,
+        name: id,
+        title: 'Tester',
+        description: 'Seeded by the e2e suite.',
+        color: '#ffffff',
+        price,
+        initialWeaponId: 'compiler',
+        hp: 100,
+        speed: 200,
+        damageMul: 1,
+        xpMul: 1,
+        pickupRadius: 85,
+      },
+    });
+  }
+
+  it('should give every user the free characters and keep selling the others', async () => {
+    await seedCharacter('free', 0);
+    await seedCharacter('paid', 50);
+    await prisma.wallet.create({ data: { userId, coins: 100 } });
+
+    const before = await request(httpServer())
+      .get('/api/store/me/characters')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect((before.body as CatalogEntry[]).map((c) => c.id)).toEqual(['free']);
+
+    await request(httpServer())
+      .post('/api/store/characters/free/purchase')
+      .set('Cookie', cookie)
+      .expect(409);
+
+    await request(httpServer())
+      .post('/api/store/characters/paid/purchase')
+      .set('Cookie', cookie)
+      .expect(201);
+
+    const after = await request(httpServer())
+      .get('/api/store/me/characters')
+      .set('Cookie', cookie)
+      .expect(200);
+
+    expect((after.body as CatalogEntry[]).map((c) => c.id)).toEqual([
+      'free',
+      'paid',
+    ]);
+
+    const wallet = await prisma.wallet.findUniqueOrThrow({ where: { userId } });
+
+    expect(wallet.coins).toBe(50);
+  });
+
+  describe('credit coins', () => {
+    const credit = (amount: unknown, as = serviceCookie) =>
+      request(httpServer())
+        .post('/api/store/me/wallet/credit')
+        .set('Cookie', as)
+        .send({ amount });
+
+    it('should refuse the token of the player who owns the wallet', async () => {
+      await credit(10, cookie).expect(403);
+
+      const wallet = await prisma.wallet.findUnique({ where: { userId } });
+
+      expect(wallet).toBeNull();
+    });
+
+    it('should refuse an amount that is not a positive integer', async () => {
+      await credit(0).expect(400);
+      await credit(2.5).expect(400);
+    });
+
+    it('should create the wallet with the coins, then keep adding to it', async () => {
+      const first = await credit(30).expect(200);
+
+      expect(first.body).toEqual({ coins: 30 });
+
+      const second = await credit(12).expect(200);
+
+      expect(second.body).toEqual({ coins: 42 });
+    });
+  });
+
   it('should list the power-up catalog to a signed-in user', async () => {
     await seedPowerUp(100);
 
@@ -97,6 +194,7 @@ describe('StoreController E2E', () => {
       ['get', '/api/store/characters'],
       ['get', '/api/store/me/wallet'],
       ['post', '/api/store/me/wallet'],
+      ['post', '/api/store/me/wallet/credit'],
       ['get', '/api/store/me/power-ups'],
       ['get', '/api/store/me/characters'],
       ['post', '/api/store/power-ups/any-id/purchase'],
@@ -142,6 +240,8 @@ describe('StoreController E2E', () => {
       'price',
       'projectileSize',
       'projectileSpeed',
+      'regeneration',
+      'requiredPowerUpId',
     ];
 
     const shop = await request(httpServer())
@@ -159,6 +259,28 @@ describe('StoreController E2E', () => {
 
     expect(Object.keys(shopBody[0]).sort()).toEqual(expected);
     expect(Object.keys(libraryBody[0]).sort()).toEqual(expected);
+  });
+
+  it('should only sell a power-up tier after the previous one', async () => {
+    const first = await seedPowerUp(10);
+    const second = await prisma.powerUp.update({
+      where: { id: (await seedPowerUp(20)).id },
+      data: { requiredPowerUpId: first.id },
+    });
+    await prisma.wallet.create({ data: { userId, coins: 100 } });
+
+    const buy = (id: string) =>
+      request(httpServer())
+        .post(`/api/store/power-ups/${id}/purchase`)
+        .set('Cookie', cookie);
+
+    await buy(second.id).expect(403);
+    await buy(first.id).expect(201);
+    await buy(second.id).expect(201);
+
+    const wallet = await prisma.wallet.findUniqueOrThrow({ where: { userId } });
+
+    expect(wallet.coins).toBe(70);
   });
 
   it('should not serve the catalog art itself', async () => {
