@@ -42,10 +42,12 @@ export class RankingService {
   }
 
   async getMyStats(userId: string) {
-    const [stats, favorite] = await Promise.all([
+    const [stats, topCharacters] = await Promise.all([
       this.runStatsRepository.findPlayerStats(userId),
-      this.runStatsRepository.findFavoriteCharacter(userId),
+      this.runStatsRepository.findTopCharacters(userId, 1),
     ]);
+
+    const [favorite] = topCharacters;
 
     if (!stats) {
       return {

@@ -61,10 +61,8 @@ describe('RankingService', () => {
       Promise.resolve(stats(userId, 1500) as ReturnType<typeof stats> | null),
     ),
     countRunsAbove: mock((_score: number) => Promise.resolve(1)),
-    findFavoriteCharacter: mock((_userId: string) =>
-      Promise.resolve({ characterId: 'enzo', _count: { _all: 2 } } as
-        | { characterId: string; _count: { _all: number } }
-        | undefined),
+    findTopCharacters: mock((_userId: string, _limit: number) =>
+      Promise.resolve([{ characterId: 'enzo', _count: { _all: 2 } }]),
     ),
   };
 
@@ -137,8 +135,8 @@ describe('RankingService', () => {
       repositoryMock.findPlayerStats.mockImplementation(() =>
         Promise.resolve(null),
       );
-      repositoryMock.findFavoriteCharacter.mockImplementation(() =>
-        Promise.resolve(undefined),
+      repositoryMock.findTopCharacters.mockImplementation(() =>
+        Promise.resolve([]),
       );
 
       const result = await service.getMyStats('user-3');

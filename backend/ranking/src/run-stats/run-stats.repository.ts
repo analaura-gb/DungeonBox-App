@@ -95,15 +95,13 @@ export class RunStatsRepository {
     });
   }
 
-  async findFavoriteCharacter(userId: string) {
-    const [favorite] = await this.prisma.runStats.groupBy({
+  findTopCharacters(userId: string, limit: number) {
+    return this.prisma.runStats.groupBy({
       by: ['characterId'],
       where: { userId },
       _count: { _all: true },
       orderBy: { _count: { characterId: 'desc' } },
-      take: 1,
+      take: limit,
     });
-
-    return favorite;
   }
 }
