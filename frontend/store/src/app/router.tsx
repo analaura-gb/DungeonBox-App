@@ -9,6 +9,6 @@ export const router = createBrowserRouter(
     },
   ],
   {
-    basename: "/store",
+    basename: import.meta.env.BASE_URL.replace(/\/$/, ""),
   },
 );

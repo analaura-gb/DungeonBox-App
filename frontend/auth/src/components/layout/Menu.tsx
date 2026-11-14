@@ -1,29 +1,30 @@
-const items = [
+const services = [
   {
     label: "Auth",
-    path: "/auth/",
     url: import.meta.env.VITE_AUTH_URL,
     protected: false,
   },
   {
     label: "Store",
-    path: "/store/",
     url: import.meta.env.VITE_STORE_URL,
     protected: true,
   },
   {
     label: "Ranking",
-    path: "/ranking/",
     url: import.meta.env.VITE_RANKING_URL,
     protected: true,
   },
   {
     label: "Game",
-    path: "/game/",
     url: import.meta.env.VITE_GAME_URL,
     protected: true,
   },
 ];
+
+const items = services.map((service) => ({
+  ...service,
+  path: new URL(service.url, window.location.origin).pathname,
+}));
 
 type FrontendMenuProps = {
   isAuthenticated: boolean;
