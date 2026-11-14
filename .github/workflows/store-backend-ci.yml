@@ -11,9 +11,10 @@ on:
       - opened
       - synchronize
       - reopened
+  workflow_call:
 
 concurrency:
-  group: store-backend-ci-${{ github.ref }}
+  group: store-backend-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
