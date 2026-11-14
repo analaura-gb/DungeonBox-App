@@ -145,9 +145,8 @@ export class GameService {
     if (!this.rankingClient.isConfigured()) return;
 
     try {
-      await this.rankingClient.recordRun({
+      await this.rankingClient.recordRun(run.userId, {
         runId: run.id,
-        userId: run.userId,
         characterId: run.characterId,
         won: run.status === RunStatus.WON,
         score: run.score,
