@@ -10,6 +10,7 @@ import tailwindcss from "@tailwindcss/vite";
 // Por isso a checagem e aqui e nao em runtime: falha no `bun run build`, dentro
 // do CI, em vez de numa TV Box sem devtools.
 const requiredEnv = [
+  "VITE_BASE_PATH",
   "VITE_API_BASE_URL",
   "VITE_AUTH_URL",
   "VITE_STORE_URL",
@@ -17,7 +18,7 @@ const requiredEnv = [
   "VITE_GAME_URL",
 ];
 
-function assertEnv(mode: string) {
+function loadRequiredEnv(mode: string) {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   const missing = requiredEnv.filter((key) => !env[key]);
 
@@ -26,15 +27,23 @@ function assertEnv(mode: string) {
       `Missing required environment variables: ${missing.join(", ")}`,
     );
   }
+
+  if (!/^\/.+\/$/.test(env.VITE_BASE_PATH)) {
+    throw new Error(
+      `VITE_BASE_PATH must be a non-root path starting and ending with "/", got "${env.VITE_BASE_PATH}"`,
+    );
+  }
+
+  return env;
 }
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  assertEnv(mode);
+  const env = loadRequiredEnv(mode);
 
   return {
     plugins: [react(), tailwindcss()],
-    base: "/store/",
+    base: env.VITE_BASE_PATH,
     server: {
       port: 5174,
       // Em producao o ingress serve pagina e API no mesmo dominio.

@@ -34,24 +34,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check that the build values are set
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_AUTH_URL: ${{ secrets.VITE_AUTH_URL }}
-          VITE_STORE_URL: ${{ secrets.VITE_STORE_URL }}
-          VITE_RANKING_URL: ${{ secrets.VITE_RANKING_URL }}
-          VITE_GAME_URL: ${{ secrets.VITE_GAME_URL }}
-        run: |
-          missing=()
-          for key in VITE_API_BASE_URL VITE_AUTH_URL VITE_STORE_URL \
-                     VITE_RANKING_URL VITE_GAME_URL; do
-            [ -n "${!key}" ] || missing+=("$key")
-          done
-          if [ ${#missing[@]} -gt 0 ]; then
-            echo "Faltando no Environment production: ${missing[*]}" >&2
-            exit 1
-          fi
-
       - name: Resolve the image tag
         id: tag
         run: echo "value=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
@@ -76,11 +58,12 @@ jobs:
             ${{ env.IMAGE }}:${{ steps.tag.outputs.value }}
             ${{ env.IMAGE }}:latest
           build-args: |
-            VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
-            VITE_AUTH_URL=${{ secrets.VITE_AUTH_URL }}
-            VITE_STORE_URL=${{ secrets.VITE_STORE_URL }}
-            VITE_RANKING_URL=${{ secrets.VITE_RANKING_URL }}
-            VITE_GAME_URL=${{ secrets.VITE_GAME_URL }}
+            VITE_BASE_PATH=${{ vars.VITE_AUTH_URL }}
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+            VITE_AUTH_URL=${{ vars.VITE_AUTH_URL }}
+            VITE_STORE_URL=${{ vars.VITE_STORE_URL }}
+            VITE_RANKING_URL=${{ vars.VITE_RANKING_URL }}
+            VITE_GAME_URL=${{ vars.VITE_GAME_URL }}
           cache-from: type=gha,scope=auth-frontend
           cache-to: type=gha,mode=max,scope=auth-frontend
 

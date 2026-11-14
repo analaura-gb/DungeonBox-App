@@ -24,6 +24,6 @@ export const router = createBrowserRouter(
     },
   ],
   {
-    basename: "/auth",
+    basename: import.meta.env.BASE_URL.replace(/\/$/, ""),
   },
 );
