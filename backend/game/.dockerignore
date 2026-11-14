@@ -1,0 +1,17 @@
+node_modules
+dist
+generated
+coverage
+
+.env
+.env.*
+
+docker-compose.yaml
+Dockerfile
+.dockerignore
+.git
+.gitignore
+*.log
+*.tsbuildinfo
+test
+**/*.spec.ts

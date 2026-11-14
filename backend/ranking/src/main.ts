@@ -7,6 +7,8 @@ async function bootstrap() {
 
   configureApp(app);
 
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3002);
 }
 
