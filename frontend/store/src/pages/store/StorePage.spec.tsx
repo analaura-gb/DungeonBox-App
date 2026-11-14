@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StorePage } from "./StorePage";
 import {
@@ -39,7 +45,9 @@ const cheapPowerUp = {
   attackSpeed: 1.2,
   projectileSpeed: 1,
   projectileSize: 1,
+  regeneration: 0,
   imageUrl: "/assets/catalog/iron-will.png",
+  requiredPowerUpId: null,
 };
 
 const pricyCharacter = {
@@ -92,6 +100,99 @@ describe("StorePage", () => {
     expect(screen.getByText("Knight")).toBeInTheDocument();
   });
 
+  it("hides the free characters, which every player already has", async () => {
+    givenCatalog();
+    service.listCharacters.mockResolvedValue([
+      { ...pricyCharacter, id: "starter", name: "Starter", price: 0 },
+      pricyCharacter,
+    ]);
+
+    render(<StorePage />);
+
+    expect(await screen.findByText("Knight")).toBeInTheDocument();
+    expect(screen.queryByText("Starter")).not.toBeInTheDocument();
+  });
+
+  it("describes only what a power-up changes", async () => {
+    givenCatalog();
+
+    render(<StorePage />);
+
+    expect(
+      await screen.findByText(
+        "+10 HP · +2 attack · +3 defense · +10% speed · +20% attack speed",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("sums the buffs of the power-ups the player owns", async () => {
+    const secondPowerUp = {
+      ...cheapPowerUp,
+      id: "power-up-2",
+      name: "Iron Will II",
+      attack: 1,
+      defense: 0,
+      health: 5,
+      movementSpeed: 1.1,
+      attackSpeed: 1,
+      regeneration: 0.3,
+    };
+    givenCatalog();
+    service.listPowerUps.mockResolvedValue([cheapPowerUp, secondPowerUp]);
+    service.ownedPowerUps.mockResolvedValue([cheapPowerUp, secondPowerUp]);
+
+    render(<StorePage />);
+
+    const buffs = await screen.findByText("Current buffs");
+    const list = within(buffs.parentElement!).getAllByRole("listitem");
+
+    expect(list.map((item) => item.textContent)).toEqual([
+      "+15 HP",
+      "+3 attack",
+      "+3 defense",
+      "+0.3 HP/s",
+      "+21% speed",
+      "+20% attack speed",
+    ]);
+  });
+
+  it("tells the player there are no buffs before the first power-up", async () => {
+    givenCatalog();
+
+    render(<StorePage />);
+
+    expect(await screen.findByText(/None yet/)).toBeInTheDocument();
+  });
+
+  it("locks a power-up tier until the previous one is owned", async () => {
+    const nextTier = {
+      ...cheapPowerUp,
+      id: "power-up-2",
+      name: "Iron Will II",
+      requiredPowerUpId: cheapPowerUp.id,
+    };
+    givenCatalog({ coins: 1000 });
+    service.listPowerUps.mockResolvedValue([cheapPowerUp, nextTier]);
+
+    const { unmount } = render(<StorePage />);
+
+    expect(
+      await screen.findByRole("button", { name: "Buy Iron Will first" }),
+    ).toBeDisabled();
+
+    unmount();
+    service.ownedPowerUps.mockResolvedValue([cheapPowerUp]);
+
+    render(<StorePage />);
+
+    expect(
+      await screen.findByRole("button", { name: "✓ Owned" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "Buy Iron Will first" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("refuses an item the balance cannot cover", async () => {
     givenCatalog({ coins: 100 });
 
@@ -109,9 +210,13 @@ describe("StorePage", () => {
 
     render(<StorePage />);
 
-    const button = await screen.findByRole("button", { name: "Owned" });
+    const button = await screen.findByRole("button", { name: "✓ Owned" });
 
     expect(button).toBeDisabled();
+    expect(button.closest("li")).toHaveClass("border-emerald-500/70");
+    expect(
+      screen.getByRole("button", { name: "Not enough coins" }).closest("li"),
+    ).toHaveClass("border-slate-800");
   });
 
   it("purchases and reports the remaining balance", async () => {

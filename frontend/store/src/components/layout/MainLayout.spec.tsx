@@ -90,6 +90,30 @@ describe("MainLayout", () => {
     expect(redirectToAuth).toHaveBeenCalled();
   });
 
+  it("opens and closes the small-screen menu", async () => {
+    render(
+      <MainLayout isAuthenticated isLoading={false}>
+        content
+      </MainLayout>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Open menu" }));
+
+    expect(screen.getByRole("button", { name: "Close menu" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(
+      screen.getAllByRole("navigation", { name: "Services" }),
+    ).toHaveLength(2);
+
+    await userEvent.click(screen.getByRole("button", { name: "Close menu" }));
+
+    expect(
+      screen.getAllByRole("navigation", { name: "Services" }),
+    ).toHaveLength(1);
+  });
+
   it("does not strand the user when the logout request fails", async () => {
     service.logout.mockRejectedValue(new Error("network down"));
 
