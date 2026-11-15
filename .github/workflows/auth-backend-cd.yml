@@ -29,6 +29,7 @@ jobs:
       packages: write
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/dungeonbox-auth-backend
+      MIGRATOR_IMAGE: ghcr.io/${{ github.repository_owner }}/dungeonbox-auth-migrator
 
     steps:
       - name: Checkout code
@@ -60,16 +61,33 @@ jobs:
           cache-from: type=gha,scope=auth-backend
           cache-to: type=gha,mode=max,scope=auth-backend
 
+      - name: Build and push the migrator image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend/auth
+          target: migrator
+          push: true
+          platforms: linux/arm64
+          tags: |
+            ${{ env.MIGRATOR_IMAGE }}:${{ steps.tag.outputs.value }}
+            ${{ env.MIGRATOR_IMAGE }}:latest
+          cache-from: |
+            type=gha,scope=auth-backend
+            type=gha,scope=auth-migrator
+          cache-to: type=gha,mode=max,scope=auth-migrator
+
       - name: Report the published reference
         env:
           TAG: ${{ steps.tag.outputs.value }}
         run: |
           {
-            echo "### Imagem publicada"
+            echo "### Imagens publicadas"
             echo
             echo '```'
             echo "${IMAGE}:${TAG}"
+            echo "${MIGRATOR_IMAGE}:${TAG}"
             echo '```'
             echo
-            echo "Esta e a referencia para o Deployment. Nao use \`latest\` no yaml."
+            echo "Referencias para o Deployment e para o Job de migration."
+            echo "Nao use \`latest\` no yaml."
           } >> "$GITHUB_STEP_SUMMARY"
