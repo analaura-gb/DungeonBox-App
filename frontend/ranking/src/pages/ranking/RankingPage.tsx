@@ -171,7 +171,10 @@ function Ranking() {
                     <td className="px-4 py-3 font-semibold">
                       {podium ? <span className="text-xl leading-none">{podium.medal}</span> : entry.position}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">{entry.isMe ? "You" : `Player ${entry.userId.slice(0, 6)}`}</td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      {entry.playerName ?? `Player ${entry.userId.slice(0, 6)}`}
+                      {entry.isMe && <span className="ml-1 text-xs text-slate-400">(you)</span>}
+                    </td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-2">
                         <CharacterImage

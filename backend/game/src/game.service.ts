@@ -80,8 +80,12 @@ export class GameService {
     };
   }
 
-  async finishRun(userId: string, runId: string, body: FinishRunDto) {
-    const run = await this.runsRepository.findByIdForUser(runId, userId);
+  async finishRun(
+    user: { sub: string; name?: string },
+    runId: string,
+    body: FinishRunDto,
+  ) {
+    const run = await this.runsRepository.findByIdForUser(runId, user.sub);
 
     if (!run) {
       throw new NotFoundException('Run not found');
@@ -114,7 +118,7 @@ export class GameService {
       passiveItems: body.passiveItems,
     });
 
-    await this.sendToRanking(finished);
+    await this.sendToRanking(finished, user.name);
     await this.creditCoins(finished);
 
     return {
@@ -141,12 +145,14 @@ export class GameService {
 
   private async sendToRanking(
     run: Run & { weapons: RunWeapon[]; passiveItems: RunPassiveItem[] },
+    playerName?: string,
   ) {
     if (!this.rankingClient.isConfigured()) return;
 
     try {
       await this.rankingClient.recordRun(run.userId, {
         runId: run.id,
+        playerName,
         characterId: run.characterId,
         won: run.status === RunStatus.WON,
         score: run.score,

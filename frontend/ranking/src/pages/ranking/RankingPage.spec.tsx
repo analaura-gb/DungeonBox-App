@@ -45,6 +45,7 @@ function entry(position: number, isMe = false): RankingEntry {
     position,
     runId: `run-${position}`,
     userId: `user-${position}-abcdef`,
+    playerName: position === 1 ? null : `Player Name ${position}`,
     isMe,
     characterId: "enzo",
     score: 10000 - position * 1000,
@@ -182,7 +183,8 @@ describe("RankingPage", () => {
     expect(within(rows[1]).getByText("🥈")).toBeInTheDocument();
     expect(within(rows[2]).getByText("🥉")).toBeInTheDocument();
     expect(within(rows[3]).getByText("4")).toBeInTheDocument();
-    expect(within(rows[1]).getByText("You")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Player Name 2")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("(you)")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Player user-1")).toBeInTheDocument();
   });
 

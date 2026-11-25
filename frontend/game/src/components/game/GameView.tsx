@@ -41,6 +41,23 @@ import { readMuted } from "../../game/audio";
 
 const isTouch = window.matchMedia("(pointer: coarse)").matches;
 
+const UPGRADE_KINDS: Record<
+  UpgradeOption["kind"],
+  { color: string; label: string }
+> = {
+  weapon: { color: "#ff8a3d", label: "WEAPON" },
+  passive: { color: "#4dc4ff", label: "PASSIVE" },
+  heal: { color: "#7cff9b", label: "HEAL" },
+};
+
+const kindColor = (o: UpgradeOption) => UPGRADE_KINDS[o.kind].color;
+
+const upgradeBadge = (o: UpgradeOption) => {
+  const { label } = UPGRADE_KINDS[o.kind];
+  if (o.kind === "heal") return label;
+  return `${label} · ${o.isNew ? "NEW" : "LV " + o.level}`;
+};
+
 type SaveState =
   | { state: "saving" }
   | { state: "saved"; runId: string; coins: number }
@@ -528,7 +545,7 @@ export function GameView() {
                   onClick={() => choose(o)}
                   className="pop-in group rounded-xl border-2 bg-black/70 p-3 text-left sm:p-4 transition active:scale-95"
                   style={{
-                    borderColor: o.color + "66",
+                    borderColor: kindColor(o) + "aa",
                     animationDelay: `${i * 70}ms`,
                   }}
                 >
@@ -536,14 +553,17 @@ export function GameView() {
                     <Icon src={o.image} size={44} />
                     <span
                       className="rounded-md px-2 py-0.5 text-[10px] font-bold tracking-widest"
-                      style={{ background: o.color + "22", color: o.color }}
+                      style={{
+                        background: kindColor(o) + "22",
+                        color: kindColor(o),
+                      }}
                     >
-                      {o.isNew ? "NEW" : "LV " + o.level}
+                      {upgradeBadge(o)}
                     </span>
                   </div>
                   <div
                     className="mt-2 text-base font-bold"
-                    style={{ color: o.color }}
+                    style={{ color: kindColor(o) }}
                   >
                     {o.name}
                   </div>

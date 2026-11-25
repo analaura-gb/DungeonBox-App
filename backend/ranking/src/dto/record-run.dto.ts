@@ -8,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -25,6 +26,11 @@ export class BuildItemDto {
 export class RecordRunDto {
   @IsUUID()
   runId: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  playerName?: string;
 
   @IsString()
   @IsNotEmpty()

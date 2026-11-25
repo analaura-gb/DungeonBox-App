@@ -19,6 +19,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 type RankingEntry = {
   position: number;
   userId: string;
+  playerName: string | null;
   isMe: boolean;
   characterId: string;
   score: number;
@@ -173,7 +174,9 @@ describe('RankingController E2E', () => {
   it('should rank the best runs, even several of the same player', async () => {
     await recordRun('user-1', run(900, false, 'enzo')).expect(201);
     await recordRun('user-1', run(300)).expect(201);
-    await recordRun('user-2', run(2000)).expect(201);
+    await recordRun('user-2', { ...run(2000), playerName: 'Guilherme' }).expect(
+      201,
+    );
     await recordRun('user-3', run(500)).expect(201);
 
     const response = await request(httpServer())
@@ -189,6 +192,8 @@ describe('RankingController E2E', () => {
       [3, 'user-3', 500],
       [4, 'user-1', 300],
     ]);
+    expect(body[0].playerName).toBe('Guilherme');
+    expect(body[2].playerName).toBeNull();
     expect(body[1].isMe).toBe(true);
     expect(body[1].characterId).toBe('enzo');
   });

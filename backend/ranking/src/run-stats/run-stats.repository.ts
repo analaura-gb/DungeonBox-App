@@ -6,6 +6,7 @@ export type BuildItem = { id: string; level: number };
 export type CreateRunStatsData = {
   runId: string;
   userId: string;
+  playerName?: string;
   characterId: string;
   won: boolean;
   score: number;
@@ -26,7 +27,7 @@ export class RunStatsRepository {
     });
   }
 
-  create(data: CreateRunStatsData) {
+  create({ playerName, ...data }: CreateRunStatsData) {
     return this.prisma.$transaction(async (tx) => {
       const now = new Date();
       const current = await tx.generalStats.findUnique({
@@ -37,6 +38,7 @@ export class RunStatsRepository {
         await tx.generalStats.create({
           data: {
             userId: data.userId,
+            playerName,
             totalRuns: 1,
             totalWins: data.won ? 1 : 0,
             totalScore: data.score,
@@ -52,6 +54,7 @@ export class RunStatsRepository {
         await tx.generalStats.update({
           where: { userId: data.userId },
           data: {
+            playerName,
             totalRuns: { increment: 1 },
             totalWins: { increment: data.won ? 1 : 0 },
             totalScore: { increment: data.score },
@@ -80,6 +83,7 @@ export class RunStatsRepository {
         { createdAt: 'asc' },
       ],
       take: limit,
+      include: { generalStats: { select: { playerName: true } } },
     });
   }
 

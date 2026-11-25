@@ -194,6 +194,7 @@ export class GameScene extends Phaser.Scene {
   walkT = 0;
 
   level = 1;
+  pendingLevelUps = 0;
   xp = 0;
   xpNext = 6;
   kills = 0;
@@ -378,6 +379,7 @@ export class GameScene extends Phaser.Scene {
     this.maxHp = this.hp = c.hp + this.bonus.health;
     this.iframe = 0;
     this.level = 1;
+    this.pendingLevelUps = 0;
     this.xp = 0;
     this.xpNext = xpForLevel(1);
     this.kills = 0;
@@ -452,7 +454,7 @@ export class GameScene extends Phaser.Scene {
     this.cb.onHud({
       hp: this.hp,
       maxHp: this.maxHp,
-      level: this.level,
+      level: this.level - this.pendingLevelUps,
       xp: this.xp,
       xpNext: this.xpNext,
       time: this.elapsed,
@@ -973,6 +975,14 @@ export class GameScene extends Phaser.Scene {
     this.audio.play("levelup");
     this.whiteFlash = 0.6;
     this.burst(this.px, this.py, 28, 0xffd84d, 300);
+    if (this.status === "levelup") {
+      this.pendingLevelUps++;
+      return;
+    }
+    this.offerUpgrades();
+  }
+
+  offerUpgrades() {
     this.draw();
     this.cb.onLevelUp(this.rollUpgrades());
     this.setStatus("levelup");
@@ -1007,6 +1017,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   applyUpgrade(o: UpgradeOption) {
+    if (this.status !== "levelup") return;
     if (o.kind === "weapon") {
       const existing = this.weapons.find((w) => w.def.id === o.id);
       if (existing) existing.level++;
@@ -1023,6 +1034,11 @@ export class GameScene extends Phaser.Scene {
       this.hp = Math.min(this.maxHp, this.hp + 40);
       this.score += 250;
       this.audio.play("heal");
+    }
+    if (this.pendingLevelUps > 0) {
+      this.pendingLevelUps--;
+      this.offerUpgrades();
+      return;
     }
     this.setStatus("playing");
     this.emitHud();
