@@ -1,0 +1,16 @@
+UPDATE "weapon_levels" SET "damage" = 15, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 1;
+UPDATE "weapon_levels" SET "damage" = 19, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 2;
+UPDATE "weapon_levels" SET "damage" = 23.5, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 3;
+UPDATE "weapon_levels" SET "damage" = 27.5, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 4;
+UPDATE "weapon_levels" SET "damage" = 32, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 5;
+UPDATE "weapon_levels" SET "damage" = 36, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 6;
+UPDATE "weapon_levels" SET "damage" = 40, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 7;
+UPDATE "weapon_levels" SET "damage" = 44.5, "speed" = 650 WHERE "weapon_id" = 'compiler' AND "level" = 8;
+UPDATE "weapon_levels" SET "damage" = 4.7 WHERE "weapon_id" = 'gc' AND "level" = 1;
+UPDATE "weapon_levels" SET "damage" = 6.8 WHERE "weapon_id" = 'gc' AND "level" = 2;
+UPDATE "weapon_levels" SET "damage" = 8.9 WHERE "weapon_id" = 'gc' AND "level" = 3;
+UPDATE "weapon_levels" SET "damage" = 11.0 WHERE "weapon_id" = 'gc' AND "level" = 4;
+UPDATE "weapon_levels" SET "damage" = 13.2 WHERE "weapon_id" = 'gc' AND "level" = 5;
+UPDATE "weapon_levels" SET "damage" = 24.5 WHERE "weapon_id" = 'gc' AND "level" = 6;
+UPDATE "weapon_levels" SET "damage" = 27.9 WHERE "weapon_id" = 'gc' AND "level" = 7;
+UPDATE "weapon_levels" SET "damage" = 31.3 WHERE "weapon_id" = 'gc' AND "level" = 8;

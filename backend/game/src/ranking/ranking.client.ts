@@ -8,6 +8,7 @@ export type RankingBuildItem = {
 
 export type RankingRun = {
   runId: string;
+  playerName?: string;
   characterId: string;
   won: boolean;
   score: number;

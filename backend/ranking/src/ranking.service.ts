@@ -32,6 +32,7 @@ export class RankingService {
       position: index + 1,
       runId: run.runId,
       userId: run.userId,
+      playerName: run.generalStats.playerName,
       isMe: run.userId === userId,
       characterId: run.characterId,
       score: run.score,

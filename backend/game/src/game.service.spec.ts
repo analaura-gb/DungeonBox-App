@@ -231,8 +231,10 @@ describe('GameService', () => {
   });
 
   describe('finishRun', () => {
+    const player = { sub: 'user-1', name: 'Ana Laura' };
+
     it('should save the result and the coins earned', async () => {
-      const result = await service.finishRun('user-1', 'run-1', validResult());
+      const result = await service.finishRun(player, 'run-1', validResult());
 
       expect(repositoryMock.finish).toHaveBeenCalledTimes(1);
       const [, data] = repositoryMock.finish.mock.calls[0];
@@ -247,7 +249,7 @@ describe('GameService', () => {
     });
 
     it('should send the run and its build to the ranking', async () => {
-      await service.finishRun('user-1', 'run-1', validResult());
+      await service.finishRun(player, 'run-1', validResult());
 
       expect(rankingMock.recordRun).toHaveBeenCalledTimes(1);
 
@@ -255,6 +257,7 @@ describe('GameService', () => {
 
       expect(userId).toBe('user-1');
       expect(sent.runId).toBe('run-1');
+      expect(sent.playerName).toBe('Ana Laura');
       expect(sent.weapons).toEqual([
         { id: 'compiler', level: 3 },
         { id: 'duck', level: 1 },
@@ -273,7 +276,7 @@ describe('GameService', () => {
         order.push('store');
       });
 
-      await service.finishRun('user-1', 'run-1', validResult());
+      await service.finishRun(player, 'run-1', validResult());
 
       expect(order).toEqual(['ranking', 'store']);
     });
@@ -281,7 +284,7 @@ describe('GameService', () => {
     it('should still finish the run when the ranking cannot record it', async () => {
       rankingMock.recordRun.mockRejectedValueOnce(new Error('Ranking is down'));
 
-      const result = await service.finishRun('user-1', 'run-1', validResult());
+      const result = await service.finishRun(player, 'run-1', validResult());
 
       expect(result.coinsEarned).toBe(12);
       expect(storeMock.creditCoins).toHaveBeenCalled();
@@ -290,7 +293,7 @@ describe('GameService', () => {
     it('should not send the run when no ranking is configured', async () => {
       rankingMock.isConfigured.mockImplementationOnce(() => false);
 
-      await service.finishRun('user-1', 'run-1', validResult());
+      await service.finishRun(player, 'run-1', validResult());
 
       expect(rankingMock.recordRun).not.toHaveBeenCalled();
     });
@@ -298,19 +301,19 @@ describe('GameService', () => {
     it('should still finish the run when the store cannot credit the coins', async () => {
       storeMock.creditCoins.mockRejectedValueOnce(new Error('Store is down'));
 
-      const result = await service.finishRun('user-1', 'run-1', validResult());
+      const result = await service.finishRun(player, 'run-1', validResult());
 
       expect(result.coinsEarned).toBe(12);
     });
 
     it('should not credit a run without coins or without a store', async () => {
-      await service.finishRun('user-1', 'run-1', {
+      await service.finishRun(player, 'run-1', {
         ...validResult(),
         score: 99,
       });
 
       storeMock.isConfigured.mockImplementation(() => false);
-      await service.finishRun('user-1', 'run-1', validResult());
+      await service.finishRun(player, 'run-1', validResult());
 
       expect(storeMock.creditCoins).not.toHaveBeenCalled();
     });
@@ -320,7 +323,7 @@ describe('GameService', () => {
         Promise.resolve(run({ startedAt: minutesAgo(11) })),
       );
 
-      await service.finishRun('user-1', 'run-1', {
+      await service.finishRun(player, 'run-1', {
         ...validResult(),
         won: true,
         survivedTime: 600,
@@ -336,7 +339,7 @@ describe('GameService', () => {
       );
 
       await expect(
-        service.finishRun('user-2', 'run-1', validResult()),
+        service.finishRun({ sub: 'user-2' }, 'run-1', validResult()),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -346,7 +349,7 @@ describe('GameService', () => {
       );
 
       await expect(
-        service.finishRun('user-1', 'run-1', validResult()),
+        service.finishRun(player, 'run-1', validResult()),
       ).rejects.toThrow(ConflictException);
     });
 
@@ -356,13 +359,16 @@ describe('GameService', () => {
       );
 
       await expect(
-        service.finishRun('user-1', 'run-1', validResult()),
+        service.finishRun(player, 'run-1', validResult()),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should reject a won run that did not last the whole semester', async () => {
       await expect(
-        service.finishRun('user-1', 'run-1', { ...validResult(), won: true }),
+        service.finishRun(player, 'run-1', {
+          ...validResult(),
+          won: true,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -386,7 +392,10 @@ describe('GameService', () => {
 
       for (const change of cases) {
         await expect(
-          service.finishRun('user-1', 'run-1', { ...validResult(), ...change }),
+          service.finishRun(player, 'run-1', {
+            ...validResult(),
+            ...change,
+          }),
         ).rejects.toThrow(BadRequestException);
       }
       expect(repositoryMock.finish).not.toHaveBeenCalled();
@@ -394,7 +403,7 @@ describe('GameService', () => {
 
     it('should reject a result without the starting weapon', async () => {
       await expect(
-        service.finishRun('user-1', 'run-1', {
+        service.finishRun(player, 'run-1', {
           ...validResult(),
           weapons: [{ id: 'duck', level: 2 }],
         }),
@@ -406,7 +415,7 @@ describe('GameService', () => {
         Promise.resolve(run({ startWeaponId: null })),
       );
 
-      await service.finishRun('user-1', 'run-1', {
+      await service.finishRun(player, 'run-1', {
         ...validResult(),
         weapons: [{ id: 'duck', level: 2 }],
       });

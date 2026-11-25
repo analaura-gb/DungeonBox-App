@@ -9,6 +9,7 @@ export type RankingEntry = {
   position: number;
   runId: string;
   userId: string;
+  playerName: string | null;
   isMe: boolean;
   characterId: string;
   score: number;

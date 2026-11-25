@@ -37,7 +37,7 @@ export class GameController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: FinishRunDto,
   ) {
-    return this.gameService.finishRun(request.user.sub, id, body);
+    return this.gameService.finishRun(request.user, id, body);
   }
 
   @Get('runs/me')

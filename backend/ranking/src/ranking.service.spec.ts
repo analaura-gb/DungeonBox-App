@@ -45,6 +45,7 @@ describe('RankingService', () => {
     weapons: [{ id: 'wifi', level: 8 }],
     passiveItems: [],
     createdAt: new Date(),
+    generalStats: { playerName: userId === 'user-2' ? 'Guilherme' : null },
   });
 
   const repositoryMock = {
@@ -112,6 +113,11 @@ describe('RankingService', () => {
 
       expect(result.map((r) => r.position)).toEqual([1, 2, 3]);
       expect(result.map((r) => r.isMe)).toEqual([false, true, true]);
+      expect(result.map((r) => r.playerName)).toEqual([
+        'Guilherme',
+        null,
+        null,
+      ]);
       expect(result[0].score).toBe(3000);
       expect(result[0].characterId).toBe('bruno');
       expect(result[0].weapons).toEqual([{ id: 'wifi', level: 8 }]);

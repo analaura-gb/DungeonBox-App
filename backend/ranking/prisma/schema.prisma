@@ -31,6 +31,7 @@ model RunStats {
 model GeneralStats {
   id                  String   @id @default(uuid())
   userId              String   @unique @map("user_id")
+  playerName          String?  @map("player_name")
   totalRuns           Int      @map("total_runs")
   totalWins           Int      @map("total_wins")
   totalScore          Int      @map("total_score")
